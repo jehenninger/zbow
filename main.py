@@ -70,20 +70,16 @@ class Main(Ui_MainWindow):
 
 
     def load_data(self):
-        self.data.file_name, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Select flow cytometry file', directory='/Users/jon/Desktop',
-                                                                       filter='FCS file ( *.fcs);; Text file (*.tsv)')
-        # @TODO make sure that we output the data in tab-separated format, otherwise change this
+        # load fcs file
+        self.data.fcs_read()
 
-        self.data.path_name = os.path.dirname(os.path.abspath(self.data.file_name))
-        self.data.sample_name = os.path.basename(self.data.file_name)
+        # transform data
+        self.data.transform_data()
 
+        # print successful load and display number of cells
         self.fileLabel.setText(self.data.sample_name + '\n'+'sample size')
         # @TODO update 'sample size' to the actual sample size that we get after loading the data
 
-        self.data.params, self.data.data = self.data.load_fcs_file()
-        print(self.data.params)
-
-    def transform_data(self):
 
 
 
