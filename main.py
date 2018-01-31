@@ -47,7 +47,7 @@ class Main(Ui_MainWindow):
         # initialize table views
         self.parameterTable.setRowCount(1)
         self.parameterTable.setColumnCount(2)
-        parameter_column_header = ['parameter', 'matching variable']
+        parameter_column_header = ['variable', 'matching parameter']
         self.parameterTable.setHorizontalHeaderLabels(parameter_column_header)
 
         self.clusterInformationTable.setRowCount(1)
