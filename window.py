@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/Users/jon/qt_projects/zbow/mainwindow.ui'
+# Form implementation generated from reading ui file '/Users/jon/PycharmProjects/zbow/bin/window.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.6
 #
 # WARNING! All changes made in this file will be lost!
-# Here is the tool to convert the .ui > .py conversion: pyuic5
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-
 class Ui_MainWindow(object):
-
-
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(952, 734)
@@ -34,13 +30,19 @@ class Ui_MainWindow(object):
         self.removeOutliers = QtWidgets.QPushButton(self.groupBox)
         self.removeOutliers.setObjectName("removeOutliers")
         self.verticalLayout.addWidget(self.removeOutliers)
-        self.parameterTable = QtWidgets.QTableView(self.groupBox)
+        self.parameterTable = QtWidgets.QTableWidget(self.groupBox)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.parameterTable.sizePolicy().hasHeightForWidth())
         self.parameterTable.setSizePolicy(sizePolicy)
+        self.parameterTable.setShowGrid(False)
         self.parameterTable.setObjectName("parameterTable")
+        self.parameterTable.setColumnCount(0)
+        self.parameterTable.setRowCount(0)
+        self.parameterTable.horizontalHeader().setStretchLastSection(True)
+        self.parameterTable.verticalHeader().setVisible(False)
+        self.parameterTable.verticalHeader().setStretchLastSection(False)
         self.verticalLayout.addWidget(self.parameterTable)
         self.horizontalLayout.addWidget(self.groupBox)
         self.groupBox_4 = QtWidgets.QGroupBox(self.centralwidget)
@@ -49,6 +51,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.groupBox_4)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.groupBox_2 = QtWidgets.QGroupBox(self.groupBox_4)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.groupBox_2.sizePolicy().hasHeightForWidth())
+        self.groupBox_2.setSizePolicy(sizePolicy)
         self.groupBox_2.setAutoFillBackground(True)
         self.groupBox_2.setTitle("")
         self.groupBox_2.setObjectName("groupBox_2")
@@ -157,16 +164,27 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.addWidget(self.plotOptionsBox)
         self.verticalLayout_2.addWidget(self.groupBox_2)
         self.clusterInformationBox = QtWidgets.QGroupBox(self.groupBox_4)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.clusterInformationBox.sizePolicy().hasHeightForWidth())
+        self.clusterInformationBox.setSizePolicy(sizePolicy)
         self.clusterInformationBox.setObjectName("clusterInformationBox")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.clusterInformationBox)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.clusterInformationTable = QtWidgets.QTableView(self.clusterInformationBox)
+        self.clusterInformationTable = QtWidgets.QTableWidget(self.clusterInformationBox)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.clusterInformationTable.sizePolicy().hasHeightForWidth())
         self.clusterInformationTable.setSizePolicy(sizePolicy)
+        self.clusterInformationTable.setShowGrid(False)
         self.clusterInformationTable.setObjectName("clusterInformationTable")
+        self.clusterInformationTable.setColumnCount(0)
+        self.clusterInformationTable.setRowCount(0)
+        self.clusterInformationTable.horizontalHeader().setStretchLastSection(True)
+        self.clusterInformationTable.verticalHeader().setVisible(False)
+        self.clusterInformationTable.verticalHeader().setStretchLastSection(False)
         self.verticalLayout_3.addWidget(self.clusterInformationTable)
         self.verticalLayout_2.addWidget(self.clusterInformationBox)
         self.horizontalLayout.addWidget(self.groupBox_4)

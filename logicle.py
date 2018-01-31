@@ -34,8 +34,8 @@ def default_transform_data(raw, params):
 
         output = subprocess.run(command, stdout=subprocess.PIPE)
 
-        transformed_data = output.stdout.split("\n")
-        print(transformed_data)
+        # transformed_data = output.stdout.split("\n")
+        # print(transformed_data)
 
         count = count + 1
         # @START need a way to read the output of the logicle command line. Currently, it's a byte stream.

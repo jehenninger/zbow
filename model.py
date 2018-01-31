@@ -15,6 +15,7 @@ class SessionData:
         self.path_name = str
         self.params = tuple
         self.raw = pd.DataFrame
+        self.data_size = int
         self.default_transformed = pd.DataFrame
         self.custom_transformed = pd.DataFrame
 
@@ -43,6 +44,7 @@ class SessionData:
         # read in the data
         meta, self.raw = fcsparser.parse(self.file_name, meta_data_only=False, reformat_meta=True)
         self.params = meta['_channel_names_']
+        self.data_size = self.raw.__len__()
 
     def transform_data(self):
         import logicle
@@ -51,3 +53,5 @@ class SessionData:
         # self.custom_transformed = logicle.custom_transform_data(self.raw, self.params)
         print('Transform ended \n')
         print(self.default_transformed)
+
+

@@ -45,13 +45,15 @@ class Main(Ui_MainWindow):
         self.ternScaleOption.setCurrentIndex(0)
 
         # initialize table views
-        parameter_column_header = QtGui.QStandardItemModel()
-        parameter_column_header.setHorizontalHeaderLabels(['parameter', 'matching variable'])
-        self.parameterTable.setModel(parameter_column_header)
+        self.parameterTable.setRowCount(1)
+        self.parameterTable.setColumnCount(2)
+        parameter_column_header = ['parameter', 'matching variable']
+        self.parameterTable.setHorizontalHeaderLabels(parameter_column_header)
 
-        cluster_info_column_header = QtGui.QStandardItemModel()
-        cluster_info_column_header.setHorizontalHeaderLabels(['color', 'id', '# of cells', '% total', 'mean sil'])
-        self.clusterInformationTable.setModel(cluster_info_column_header)
+        self.clusterInformationTable.setRowCount(1)
+        self.clusterInformationTable.setColumnCount(5)
+        cluster_info_column_header = ['color', 'id', '# of cells', '% total', 'mean sil']
+        self.clusterInformationTable.setHorizontalHeaderLabels(cluster_info_column_header)
         # @TODO stretch the header sections so that they fill up the whole space when resizing the gui
 
         # connect menu items
@@ -68,49 +70,46 @@ class Main(Ui_MainWindow):
         self.highlightClusterPushButton.clicked.connect(self.highlight_cluster)
         self.drawGatePushButton.clicked.connect(self.draw_gate)
 
-
     def load_data(self):
+        # @TODO Add loading timer dialog box
         # load fcs file
         self.data.fcs_read()
 
+        # fill parameter table
+        view.updateParamTable(self.parameterTable, self.data.params)
+
         # transform data
-        self.data.transform_data()
+        # self.data.transform_data()
 
         # print successful load and display number of cells
-        self.fileLabel.setText(self.data.sample_name + '\n'+'sample size')
-        # @TODO update 'sample size' to the actual sample size that we get after loading the data
-
-
-
-
+        self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' cells')
 
     def clear_data(self):
-        foo
+        print('not done yet')
 
     def save_data(self):
-        foo
+        print('not done yet')
 
     def restore_data(self):
-         foo
+        print('not done yet')
 
     def remove_outliers(self):
-        foo
+        print('not done yet')
 
     def cluster_data(self):
-        foo
+        print('not done yet')
 
     def add_center(self):
-        foo
+        print('not done yet')
 
     def remove_center(self):
-        foo
+        print('not done yet')
 
     def highlight_cluster(self):
-        foo
+        print('not done yet')
 
     def draw_gate(self):
-        foo
-
+        print('not done yet')
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
