@@ -85,8 +85,10 @@ class Main(Ui_MainWindow):
         # print successful load and display number of cells
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' cells')
 
-        # initialize 3D zbow graph
-        self.data.init_zbow_3D_plot()
+        # initialize 2D and 3D zbow graph
+        #  self.data.init_zbow_3d_plot()
+        self.data.init_zbow_2d_plot()
+
 
     def update_params(self):
         print('not done yet')
@@ -117,6 +119,7 @@ class Main(Ui_MainWindow):
 
     def draw_gate(self):
         print('not done yet')
+
 
 
 if __name__ == "__main__":

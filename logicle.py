@@ -38,7 +38,6 @@ def default_transform_data(raw, params):
 
         count = count + 1
 
-    print('This is the default transformed data before converting to dataframe \n', transformed_data, '\n')
     transformed_data = pd.DataFrame(data=transformed_data, columns=params)
     return transformed_data
 
@@ -78,7 +77,6 @@ def custom_transform_data(raw, params):
 
         count = count + 1
 
-    print('This is the custom transformed data before converting to dataframe \n', transformed_data, '\n')
 
     transformed_data = pd.DataFrame(data=transformed_data, columns=params)
     return transformed_data
