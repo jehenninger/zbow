@@ -18,6 +18,7 @@ class SessionData:
         self.data_size = int
         self.default_transformed = pd.DataFrame
         self.custom_transformed = pd.DataFrame
+        self.param_combo_box_list = list
 
     # methods
 
@@ -49,9 +50,37 @@ class SessionData:
     def transform_data(self):
         import logicle
         # initialize outputs
-        self.default_transformed = logicle.default_transform_data(self.raw, self.params)
-        # self.custom_transformed = logicle.custom_transform_data(self.raw, self.params)
-        print('Transform ended \n')
-        print(self.default_transformed)
+
+        param_idx = self.parse_params()
+        default_param_idx = param_idx[0:12]  # only want first 12 indices for default transform
+        custom_param_idx = param_idx[6:9]  # only want RFP, YFP, and CFP for custom transform
+
+        default_params = [self.params[i] for i in default_param_idx]
+        custom_params = [self.params[j] for j in custom_param_idx]
+        self.default_transformed = logicle.default_transform_data(self.raw, default_params)
+        self.custom_transformed = logicle.custom_transform_data(self.raw, custom_params)
+        print('Transform ended successfully \n')  # @DEBUG
+
+    def parse_params(self):
+        # this function will get the indices of the proper params from the GUI for transformation and
+        # store them in a list
+        # @TODO should this be a dict with param names? I'm assuming that params will always be in the same order here
+
+        # loop through combo boxes of first 12 parameters (we don't need time or events) and get the index of the param
+        idx = []
+        for c in self.param_combo_box_list:
+            idx.append(c.currentIndex())
+
+        print('These are the current parameter indices.. \n')
+        print(idx)  # @DEBUG making sure that we get the proper indices
+        return idx
+
+    def init_zbow_3D_plot(self):
+        import vispy_scatter_3D
+
+        rgb_data = self.default_transformed.iloc[:, [6, 7, 8]].as_matrix()
+        print('size of RGB data is %d by %d \n' % rgb_data.shape)
+        print(rgb_data)
+        vispy_scatter_3D.scatter(rgb_data)
 
 

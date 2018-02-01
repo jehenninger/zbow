@@ -1,5 +1,6 @@
 def default_transform_data(raw, params):
     import numpy as np
+    import pandas as pd
     import subprocess
 
     t = 262144
@@ -9,6 +10,8 @@ def default_transform_data(raw, params):
     # calculate default widths
     w = []
     count = 0
+
+    transformed_data = {}
 
     for p in params:
         w.append((m - np.log10(t / np.abs(np.min(raw[p])))) / 2)
@@ -26,50 +29,56 @@ def default_transform_data(raw, params):
         command.extend(transform_parameters)
         command.extend(data_as_string)
 
-        # for i in range(0, raw.__len__()):
-        #     process = subprocess.run([command, t.__str__(), w[count].__str__(), m.__str__(), a.__str__(),
-        #                               raw[p][i].__str__()], stdout=subprocess.PIPE)
-        #
-        #     transformed_data[p][i] = process.stdout
-
         output = subprocess.run(command, stdout=subprocess.PIPE)
 
-        # transformed_data = output.stdout.split("\n")
-        # print(transformed_data)
+        temp_data = output.stdout.decode("utf-8").splitlines()
+        temp_data = [float(i) for i in temp_data]
+        print('This is the type output of the default transform...\n')
+        print(type(temp_data))  # @DEBUG make sure that we are collecting the right type of data
+        transformed_data.update({p: temp_data})
 
         count = count + 1
-        # @START need a way to read the output of the logicle command line. Currently, it's a byte stream.
 
-   #  return transformed_data
+    transformed_data = pd.DataFrame(data=transformed_data)
+    return transformed_data
 
 
 def custom_transform_data(raw, params):
-    import numpy as np
+    import pandas as pd
     import subprocess
 
     t = 262144
     m = 4.5
     a = 0
 
-    transformed_data = raw
-
     # calculate default widths
-    w = []
+    w = [1.5, 1.75, 1.75]  # order is RGB
     count = 0
 
+    transformed_data = {}
+
     for p in params:
-        w.append((m - np.log10(t / np.abs(np.min(raw[p])))) / 2)
 
-        if w[count] < 0:
-            w[count] = 0
+        # custom transform
+        command = ['bin/logicle/logicle.out']
+        transform_parameters = [t.__str__(), w[count].__str__(), m.__str__(), a.__str__()]
 
-        # default transform
-        command = 'bin/logicle/logicle.out'
+        data = raw[p].tolist()
+        data_as_string = [str(i) for i in data]
 
-        for i in range(0, raw.__len__()):
-            process = subprocess.run([command, t.__str__(), w[count].__str__(), m.__str__(), a.__str__(),
-                                      raw[p][i].__str__()], stdout=subprocess.PIPE)
+        command.extend(transform_parameters)
+        command.extend(data_as_string)
 
-            transformed_data[p][i] = process.stdout.__float__()
+        output = subprocess.run(command, stdout=subprocess.PIPE)
+
+        temp_data = output.stdout.decode("utf-8").splitlines()
+        temp_data = [float(i) for i in temp_data]
+        print('This is the type output of the custom transform...\n')
+        print(type(temp_data))  # @DEBUG make sure that we are collecting the right type of data
+        transformed_data.update({p: temp_data})
 
         count = count + 1
+
+    transformed_data = pd.DataFrame(data=transformed_data)
+    return transformed_data
+

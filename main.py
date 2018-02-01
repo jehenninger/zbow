@@ -54,7 +54,6 @@ class Main(Ui_MainWindow):
         self.clusterInformationTable.setColumnCount(5)
         cluster_info_column_header = ['color', 'id', '# of cells', '% total', 'mean sil']
         self.clusterInformationTable.setHorizontalHeaderLabels(cluster_info_column_header)
-        # @TODO stretch the header sections so that they fill up the whole space when resizing the gui
 
         # connect menu items
         self.actionLoad.triggered.connect(self.load_data)
@@ -69,20 +68,28 @@ class Main(Ui_MainWindow):
         self.removeCenterPushButton.clicked.connect(self.remove_center)
         self.highlightClusterPushButton.clicked.connect(self.highlight_cluster)
         self.drawGatePushButton.clicked.connect(self.draw_gate)
+        self.updateParams.clicked.connect(self.update_params)
 
     def load_data(self):
         # @TODO Add loading timer dialog box
+        # @TODO Add shortcut for menu items, like loading data
         # load fcs file
         self.data.fcs_read()
 
         # fill parameter table
-        view.updateParamTable(self.parameterTable, self.data.params)
+        self.data.param_combo_box_list = view.initParamTable(self.parameterTable, self.data.params)
 
         # transform data
-        # self.data.transform_data()
+        self.data.transform_data()
 
         # print successful load and display number of cells
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' cells')
+
+        # initialize 3D zbow graph
+        self.data.init_zbow_3D_plot()
+
+    def update_params(self):
+        print('not done yet')
 
     def clear_data(self):
         print('not done yet')
@@ -111,9 +118,16 @@ class Main(Ui_MainWindow):
     def draw_gate(self):
         print('not done yet')
 
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+    screen = app.primaryScreen()
+    size = screen.size()
+    height = size.height()
+    width = size.width()
+
     dialog = QtWidgets.QMainWindow()
+    dialog.move(0.05*width, 0.1*height)
     prog = Main(dialog)
     dialog.show()
     sys.exit(app.exec_())
