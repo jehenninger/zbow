@@ -10,9 +10,9 @@ def scatter(data):
 
     # Add a ViewBox to let the user zoom/rotate
     view = canvas.central_widget.add_view()
-    view.camera = 'turntable'
+    view.camera = 'arcball'
     view.camera.fov = 45
-    view.camera.distance = 5
+    view.camera.distance = 20
 
     # plot
     a1 = scene.visuals.XYZAxis(parent=view.scene)

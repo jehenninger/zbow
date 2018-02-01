@@ -33,13 +33,13 @@ def default_transform_data(raw, params):
 
         temp_data = output.stdout.decode("utf-8").splitlines()
         temp_data = [float(i) for i in temp_data]
-        print('This is the type output of the default transform...\n')
-        print(type(temp_data))  # @DEBUG make sure that we are collecting the right type of data
+
         transformed_data.update({p: temp_data})
 
         count = count + 1
 
-    transformed_data = pd.DataFrame(data=transformed_data)
+    print('This is the default transformed data before converting to dataframe \n', transformed_data, '\n')
+    transformed_data = pd.DataFrame(data=transformed_data, columns=params)
     return transformed_data
 
 
@@ -73,12 +73,13 @@ def custom_transform_data(raw, params):
 
         temp_data = output.stdout.decode("utf-8").splitlines()
         temp_data = [float(i) for i in temp_data]
-        print('This is the type output of the custom transform...\n')
-        print(type(temp_data))  # @DEBUG make sure that we are collecting the right type of data
+
         transformed_data.update({p: temp_data})
 
         count = count + 1
 
-    transformed_data = pd.DataFrame(data=transformed_data)
+    print('This is the custom transformed data before converting to dataframe \n', transformed_data, '\n')
+
+    transformed_data = pd.DataFrame(data=transformed_data, columns=params)
     return transformed_data
 

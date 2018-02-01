@@ -59,6 +59,23 @@ class SessionData:
         custom_params = [self.params[j] for j in custom_param_idx]
         self.default_transformed = logicle.default_transform_data(self.raw, default_params)
         self.custom_transformed = logicle.custom_transform_data(self.raw, custom_params)
+
+        # rename columns for future functions:
+        current_column_names_default = list(self.default_transformed)
+        current_column_names_default[6] = 'RFP'
+        current_column_names_default[7] = 'YFP'
+        current_column_names_default[8] = 'CFP'
+        self.default_transformed.columns = current_column_names_default
+
+        current_column_names_custom = list(self.custom_transformed)
+        current_column_names_custom[0] = 'RFP'
+        current_column_names_custom[1] = 'YFP'
+        current_column_names_custom[2] = 'CFP'
+        self.custom_transformed.columns = current_column_names_custom
+
+        print(self.default_transformed)
+        print(self.custom_transformed)
+
         print('Transform ended successfully \n')  # @DEBUG
 
     def parse_params(self):
@@ -72,7 +89,7 @@ class SessionData:
             idx.append(c.currentIndex())
 
         print('These are the current parameter indices.. \n')
-        print(idx)  # @DEBUG making sure that we get the proper indices
+        print(idx, '\n')  # @DEBUG making sure that we get the proper indices
         return idx
 
     def init_zbow_3D_plot(self):
