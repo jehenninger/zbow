@@ -109,14 +109,25 @@ class SessionData:
 
     def ternary_transform(self, rgb_data):
         import math
+        from ternary import helpers
+
+        # old way before I found library. Still bugs with the old method
         total = rgb_data.sum(axis='columns')
         rgb_data = rgb_data.divide(total, axis=0)
 
         y = rgb_data['YFP'].multiply(math.sin(math.pi/3), axis=0)
-        x = rgb_data['RFP'].add(y.multiply(1/math.tan(math.pi/3))))
+        x = rgb_data['RFP'].add(y.multiply(1/math.tan(math.pi/3)))
 
         tern_coords = pd.concat([x, y], axis='columns')
         tern_coords.columns = ['x', 'y']
+
+        # # new way with library
+        # rgb_data = [tuple(x) for x in rgb_data.values]
+        # x, y = helpers.project_sequence(rgb_data, permutation=None)
+        #
+        # tern_coords = pd.DataFrame(data=[x, y])
+        # tern_coords = tern_coords.transpose()
+        # tern_coords.columns = ['x', 'y']
 
         return tern_coords
 
@@ -126,13 +137,19 @@ class SessionData:
         rgb_data = self.default_transformed.iloc[:, [6, 7, 8]].as_matrix()
         color_data = self.custom_transformed.as_matrix()
         print('size of RGB data is %d by %d \n' % rgb_data.shape)
-        scatter3D.scatter_3d(rgb_data, color_data)
+        self.zbow_3d_plot_handle = scatter3D.scatter_3d(rgb_data, color_data)
 
     def init_zbow_2d_plot(self):
         import scatter2D
 
+        # old way
         rgb_data = self.custom_ternary.as_matrix()
         color_data = self.custom_transformed.as_matrix()
-        scatter2D.scatter_2d(rgb_data, color_data)
+        self.zbow_2d_plot_handle =  scatter2D.scatter_2d(rgb_data, color_data)
 
+        # new way with library
+        # data_copy = self.custom_transformed[['RFP', 'CFP', 'YFP']]
+        # rgb_data = [tuple(x) for x in data_copy.values]
+        # color_data = self.custom_transformed.as_matrix()
+        # scatter2D.scatter_2d(rgb_data, color_data)
 

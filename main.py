@@ -86,7 +86,7 @@ class Main(Ui_MainWindow):
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' cells')
 
         # initialize 2D and 3D zbow graph
-        #  self.data.init_zbow_3d_plot()
+        self.data.init_zbow_3d_plot()
         self.data.init_zbow_2d_plot()
 
 
@@ -110,6 +110,8 @@ class Main(Ui_MainWindow):
 
     def add_center(self):
         print('not done yet')
+        from vispy.color import Color
+        self.data.zbow_2d_plot_handle.set_data(face_color = Color('blue'))
 
     def remove_center(self):
         print('not done yet')

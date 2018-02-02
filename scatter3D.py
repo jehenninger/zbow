@@ -49,6 +49,8 @@ def scatter_3d(data, color_data):
     # run
     # app.run()
 
+    return(p1)
+
 
 
 
