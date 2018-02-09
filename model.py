@@ -12,6 +12,8 @@ import numpy as np
 class SessionData:
     def __init__(self):
         # variables
+        self.OS = str
+        self.screen_size = []
         self.file_name = str
         self.sample_name = str
         self.path_name = str
@@ -137,7 +139,9 @@ class SessionData:
         rgb_data = self.default_transformed.iloc[:, [6, 7, 8]].as_matrix()
         color_data = self.custom_transformed.as_matrix()
         print('size of RGB data is %d by %d \n' % rgb_data.shape)
-        self.zbow_3d_plot_handle = scatter3D.scatter_3d(rgb_data, color_data)
+
+        position = (0.5*self.screen_size[0], 0.1*self.screen_size[1])
+        scatter3D.scatter_3d(rgb_data, color_data, position=position)
 
     def init_zbow_2d_plot(self):
         import scatter2D
@@ -145,7 +149,10 @@ class SessionData:
         # old way
         rgb_data = self.custom_ternary.as_matrix()
         color_data = self.custom_transformed.as_matrix()
-        self.zbow_2d_plot_handle =  scatter2D.scatter_2d(rgb_data, color_data)
+
+        position = (0.5*self.screen_size[0], 0.5*self.screen_size[1])
+
+        scatter2D.scatter_2d(rgb_data, color_data, position=position)
 
         # new way with library
         # data_copy = self.custom_transformed[['RFP', 'CFP', 'YFP']]

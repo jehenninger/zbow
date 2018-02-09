@@ -1,4 +1,4 @@
-def scatter_2d(data, color_data):
+def scatter_2d(data, color_data, position=None):
     from matplotlib import pyplot as plt
     import ternary
 
@@ -33,6 +33,7 @@ def scatter_2d(data, color_data):
 
     from vispy import app, visuals, scene
     from vispy.color import Color, ColorArray
+    import helper
     from PyQt5 import QtWidgets
 
     # build your visuals
@@ -45,8 +46,10 @@ def scatter_2d(data, color_data):
     canvas = scene.SceneCanvas(title='zbow 2D scatter plot',
                                keys='interactive',
                                show=True,
-                               bgcolor=Color([1, 1, 1, 1]))
+                               bgcolor=Color([1, 1, 1, 1]),
+                               position=position)
     # parent=scatter_window)  # defaults to black
+
 
     # Add a ViewBox to let the user zoom/rotate
     view = canvas.central_widget.add_view()
@@ -69,4 +72,4 @@ def scatter_2d(data, color_data):
 
     p1.symbol = visuals.marker_types[10]
 
-    return(p1)
+

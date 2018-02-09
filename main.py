@@ -16,6 +16,9 @@ class Main(Ui_MainWindow):
         # get operating system
         self.OS = sys.platform
 
+        # init screen size
+        self.screen_size = []
+
         # instance data class and view class
         self.data = model.SessionData()
 
@@ -73,6 +76,10 @@ class Main(Ui_MainWindow):
     def load_data(self):
         # @TODO Add loading timer dialog box
         # @TODO Add shortcut for menu items, like loading data
+
+        self.data.screen_size = self.screen_size
+        self.data.OS = self.OS
+
         # load fcs file
         self.data.fcs_read()
 
@@ -110,8 +117,6 @@ class Main(Ui_MainWindow):
 
     def add_center(self):
         print('not done yet')
-        from vispy.color import Color
-        self.data.zbow_2d_plot_handle.set_data(face_color = Color('blue'))
 
     def remove_center(self):
         print('not done yet')
@@ -134,5 +139,6 @@ if __name__ == "__main__":
     dialog = QtWidgets.QMainWindow()
     dialog.move(0.05*width, 0.1*height)
     prog = Main(dialog)
+    prog.screen_size = [size.width(), size.height()]
     dialog.show()
     sys.exit(app.exec_())

@@ -1,0 +1,7 @@
+change size of scatter and ternary graphs to reflect the user's screen
+
+make sure things work with Windows and MacOS
+
+make icon something zebrabow-y!
+
+3D scatter has some antialiasing bugs that haven't been fixed in vispy. Ignore for now.
