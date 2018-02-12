@@ -92,9 +92,12 @@ class Main(Ui_MainWindow):
         # print successful load and display number of cells
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' cells')
 
+        # auto cluster the data
+        self.data.auto_cluster()
+
         # initialize 2D and 3D zbow graph
-        self.data.init_zbow_3d_plot()
-        self.data.init_zbow_2d_plot()
+        self.data.zbow_3d_plot(scale=self.scatterScaleOption.currentIndex(), color=self.scatterColorOption.currentIndex())
+        # self.data.init_zbow_2d_plot()
 
 
     def update_params(self):
