@@ -6,6 +6,11 @@ import model
 import view
 
 
+class scatterWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super(scatterWindow, self).__init__()
+
+
 class Main(Ui_MainWindow):
     def __init__(self, dialog):
         super(Main, self).__init__()
@@ -19,13 +24,16 @@ class Main(Ui_MainWindow):
         # init screen size
         self.screen_size = []
 
-        # instance data class and view class
+        # instance data class and other windows
         self.data = model.SessionData()
+        self.scatter3DWindow = scatterWindow()
+        self.tern2DWindow = scatterWindow()
 
         # initialize fields and defaults
-        self.clusterSampleSize.setText("5000")
+        self.clusterSampleSize.setText("10000")
 
-        cluster_data_list = ['ternary', 'rgb']
+        cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary',
+                             'default rgb', 'linear ternary', 'linear rgb']
         self.clusterOnData.insertItems(0, cluster_data_list)
         self.clusterOnData.setCurrentIndex(0)
 
@@ -73,6 +81,9 @@ class Main(Ui_MainWindow):
         self.drawGatePushButton.clicked.connect(self.draw_gate)
         self.updateParams.clicked.connect(self.update_params)
 
+        # connect options
+        self.scatterColorOption.activated.connect(self.update_plots)
+
     def load_data(self):
         # @TODO Add loading timer dialog box
         # @TODO Add shortcut for menu items, like loading data
@@ -81,7 +92,9 @@ class Main(Ui_MainWindow):
         self.data.OS = self.OS
 
         # load fcs file
-        self.data.fcs_read()
+        sample_size = self.clusterSampleSize.text()
+        sample_size = int(sample_size)
+        self.data.fcs_read(sample_size)
 
         # fill parameter table
         self.data.param_combo_box_list = view.initParamTable(self.parameterTable, self.data.params)
@@ -92,12 +105,20 @@ class Main(Ui_MainWindow):
         # print successful load and display number of cells
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' cells')
 
-        # auto cluster the data
-        self.data.auto_cluster()
 
         # initialize 2D and 3D zbow graph
-        self.data.zbow_3d_plot(scale=self.scatterScaleOption.currentIndex(), color=self.scatterColorOption.currentIndex())
-        # self.data.init_zbow_2d_plot()
+        default_position = [0.5 * self.screen_size[0], 0.05 * self.screen_size[1]]
+        self.scatter3DWindow.move(default_position[0], default_position[1])
+        # @TODO set default size of the 2D and 3D graphs so that they don't overlap
+        self.data.zbow_3d_plot(self.scatter3DWindow,
+                               scale=self.scatterScaleOption.currentIndex(),
+                               color=self.scatterColorOption.currentIndex())
+
+        default_position = [0.5 * self.screen_size[0], 0.5 * self.screen_size[1]]
+        self.tern2DWindow.move(default_position[0], default_position[1])
+        self.data.zbow_2d_plot(self.tern2DWindow,
+                               scale=self.ternScaleOption.currentIndex(),
+                               color=self.ternColorOption.currentIndex())
 
 
     def update_params(self):
@@ -116,7 +137,8 @@ class Main(Ui_MainWindow):
         print('not done yet')
 
     def cluster_data(self):
-        print('not done yet')
+        # auto cluster the data
+        self.data.auto_cluster(self.clusterOnData.currentIndex())
 
     def add_center(self):
         print('not done yet')
@@ -130,6 +152,11 @@ class Main(Ui_MainWindow):
     def draw_gate(self):
         print('not done yet')
 
+    def update_plots(self):
+        self.data.zbow_3d_plot(self.scatter3DWindow,
+                               scale=self.scatterScaleOption.currentIndex(),
+                               color=self.scatterColorOption.currentIndex(),
+                               update=True)
 
 
 if __name__ == "__main__":

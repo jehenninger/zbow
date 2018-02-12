@@ -4,6 +4,8 @@ import pandas as pd
 from PyQt5 import QtWidgets
 import os
 import numpy as np
+
+
 # import matplotlib as mpl
 # mpl.use('Agg')
 # from matplotlib import pyplot as plt
@@ -27,18 +29,21 @@ class SessionData:
         self.custom_ternary = pd.DataFrame
         self.linear_ternary = pd.DataFrame
         self.param_combo_box_list = list
+        self.cluster_data_idx = []
+        self.auto_cluster_idx = []
+        self.tab_cluster_data = pd.Series
 
-        self.cluster_data = pd.DataFrame
-        self.auto_cluster_data = []
+
 
         self.h_canvas_3d = None
         self.h_view_3d = None
+        self.view_3d_options = {}
         self.h_canvas_2d = None
         self.h_view_2d = None
 
     # methods
 
-    def fcs_read(self):
+    def fcs_read(self, sample_size):
         # Old method to call command line
         # command = '/Users/jon/PycharmProjects/zbow/fcs_read.py %s' % self.file_name
         #
@@ -49,6 +54,9 @@ class SessionData:
         # return output
 
         import fcsparser
+
+        # @TODO Save the pathname and use an if statement so that if the program is kept open, it will re-open the
+        # previous path
 
         # self.file_name, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Select flow cytometry file',
         #                                                           directory='/Users/jon/Desktop',
@@ -65,6 +73,11 @@ class SessionData:
         self.params = meta['_channel_names_']
         self.data_size = self.raw.__len__()
 
+        # take random sample if user wants a smaller sample size
+
+        if sample_size < self.data_size:
+            self.raw = self.raw.sample(sample_size, replace=False)
+
     def transform_data(self):
         import logicle
         # initialize outputs
@@ -72,7 +85,7 @@ class SessionData:
         param_idx = self.parse_params()
         default_param_idx = param_idx[0:12]  # only want first 12 indices for default transform
         custom_param_idx = param_idx[6:9]  # only want RFP, YFP, and CFP for custom transform
-        linear_param_idx = param_idx[0:12] # only want first 12 indices for linear
+        linear_param_idx = param_idx[0:12]  # only want first 12 indices for linear
 
         default_params = [self.params[i] for i in default_param_idx]
         custom_params = [self.params[j] for j in custom_param_idx]
@@ -102,7 +115,6 @@ class SessionData:
         current_column_names_custom[2] = 'CFP'
         self.custom_transformed.columns = current_column_names_custom
         self.custom_ternary = self.ternary_transform(self.custom_transformed)
-
 
         current_column_names_linear = list(self.linear_transformed)
         current_column_names_linear[6] = 'RFP'
@@ -136,8 +148,8 @@ class SessionData:
         total = rgb_data.sum(axis='columns')
         rgb_data = rgb_data.divide(total, axis=0)
 
-        y = rgb_data['YFP'].multiply(math.sin(math.pi/3), axis=0)
-        x = rgb_data['RFP'].add(y.multiply(1/math.tan(math.pi/3)))
+        y = rgb_data['YFP'].multiply(math.sin(math.pi / 3), axis=0)
+        x = rgb_data['RFP'].add(y.multiply(1 / math.tan(math.pi / 3)))
 
         tern_coords = pd.concat([x, y], axis='columns')
         tern_coords.columns = ['x', 'y']
@@ -152,67 +164,117 @@ class SessionData:
 
         return tern_coords
 
-    def auto_cluster(self):
+    def auto_cluster(self, cluster_on_data):
         from sklearn.cluster import DBSCAN
-        # @START HERE
-        self.auto_cluster_data = DBSCAN(eps=0.01, n_jobs=-1).fit_predict(self.custom_ternary.as_matrix())
-        print('Number of clusters: ', max(self.auto_cluster_data), '\n')
-        print('Cluster assignment: \n', self.auto_cluster_data, '\n')
 
-    def zbow_3d_plot(self, scale, color):
+        # cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary', 'default rgb', 'linear']
+
+        if cluster_on_data == 0:
+            data = self.custom_ternary
+        elif cluster_on_data == 1:
+            data = self.custom_transformed[['RFP', 'YFP', 'CFP']]
+        elif cluster_on_data == 2:
+            data = self.default_ternary
+        elif cluster_on_data == 3:
+            data = self.default_transformed[['RFP', 'YFP', 'CFP']]
+        elif cluster_on_data == 4:
+            data = self.linear_ternary
+        elif cluster_on_data == 5:
+            data = self.linear_transformed[['RFP', 'YFP', 'CFP']]
+
+        auto_cluster_data = DBSCAN(eps=0.01, n_jobs=-1).fit_predict(data.as_matrix())
+        max_cluster = max(auto_cluster_data)
+
+        #DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for the time being
+        for k in range(0, len(auto_cluster_data)):
+            if auto_cluster_data[k] == -1:
+                auto_cluster_data[k] = max_cluster + 1
+
+        self.auto_cluster_idx = auto_cluster_data
+        self.cluster_data_idx = auto_cluster_data
+
+        cluster_data = pd.Series(auto_cluster_data)
+        cluster_data_counts = cluster_data.value_counts(normalize=False, sort=True, ascending=False)
+        cluster_data_freq = cluster_data.value_counts(normalize=True, sort=True, ascending=False)
+        cluster_data_freq = 100 * cluster_data_freq
+
+        tab_cluster_data = {'id': cluster_data_counts.index, 'num of cells': cluster_data_counts,
+                            'percentage': cluster_data_freq}
+
+        self.tab_cluster_data = pd.DataFrame(tab_cluster_data)
+
+        print('Number of clusters: ', self.tab_cluster_data['id'].count(), '\n')
+        print('Tab cluster data: \n', self.tab_cluster_data, '\n')
+
+    def zbow_3d_plot(self, parent, scale, color, update=False):
         from vispy import app, visuals, scene
         from vispy.color import Color, ColorArray
         import helper
         # @TODO need to parse user options here for data
 
+        new_window_position = parent.pos()
+
+        if update:
+            options = self.h_view_3d.camera.get_state()
+            print(options)
+
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
             scale_data = self.custom_transformed.as_matrix()
         elif scale == 1:
-            scale_data = self.default_transformed.iloc[:, [6, 7, 8]].as_matrix()
+            scale_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
         elif scale == 2:
-            scale_data = self.linear_transformed.iloc[:, [6, 7, 8]].as_matrix()
+            scale_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
 
         # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
         if color == 0:
-            # color_data = self.custom_transformed.as_matrix()
-            pseudo_color = helper.distinguishable_colors(max(self.auto_cluster_data) + 1)
-            print('Scale data length is ', scale_data.shape[0], '\n')
-            color_data = [None] * scale_data.shape[0]
-            for i in range(0, scale_data.shape[0]):
-                color_data[i] = pseudo_color[self.auto_cluster_data[i]]
-
-            print('Color is: \n', color_data, '\n')
+            color_data = self.custom_transformed.as_matrix()
         elif color == 1:
             color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
         elif color == 2:
-            color_data = self.pseudo_color # @TODO Need to define cluster color
+            print(self.tab_cluster_data)
+            if self.tab_cluster_data.empty:
+                color_data = helper.distinguishable_colors(1)
+
+            else:
+                pseudo_color = helper.distinguishable_colors(self.tab_cluster_data['id'].count())
+
+                color_data = [None] * scale_data.shape[0]
+                for i in range(0, scale_data.shape[0]):
+                    color_data[i] = pseudo_color[self.auto_cluster_idx[i]]
         elif color == 3:
             color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
-
-        default_position = (0.5*self.screen_size[0], 0.1*self.screen_size[1])
 
         # build your visuals
         scatter = scene.visuals.create_visual_node(visuals.MarkersVisual)
 
         # build initial canvas if one doesn't exist
-        if not self.h_canvas_3d:
-            self.h_canvas_3d = scene.SceneCanvas(title='zbow 3D scatter plot',
-                                                 keys='interactive',
-                                                 show=True,
-                                                 bgcolor=Color([0, 0, 0, 1]),
-                                                 position=default_position)
+        self.h_canvas_3d = scene.SceneCanvas(title='zbow 3D scatter plot',
+                                             keys='interactive',
+                                             show=True,
+                                             bgcolor=Color([0, 0, 0, 1]),
+                                             )
+        parent.setCentralWidget(self.h_canvas_3d.native)
 
-            # Add a ViewBox to let the user zoom/rotate
+        # Add a ViewBox to let the user zoom/rotate
+        # @TODO Find a way to store the current view so that it is not reset when settings are changed
+
+        default_options = {'fov': 5, 'distance': 25, 'elevation': 30, 'azimuth': 130}
+        if update:
             self.h_view_3d = self.h_canvas_3d.central_widget.add_view()
             self.h_view_3d.camera = 'turntable'
-            self.h_view_3d.camera.fov = 5
-            self.h_view_3d.camera.distance = 25
-            self.h_view_3d.camera.elevation = 30
-            self.h_view_3d.camera.azimuth = 130
+            self.h_view_3d.camera.set_state(options)
 
-            # plot 3D RGB axis
-            scene.visuals.XYZAxis(parent=self.h_view_3d.scene)
+        else:
+            self.h_view_3d = self.h_canvas_3d.central_widget.add_view()
+            self.h_view_3d.camera = 'turntable'
+            self.h_view_3d.camera.fov = default_options['fov']
+            self.h_view_3d.camera.distance = default_options['distance']
+            self.h_view_3d.camera.elevation = default_options['elevation']
+            self.h_view_3d.camera.azimuth = default_options['azimuth']
+
+        # plot 3D RGB axis
+        scene.visuals.XYZAxis(parent=self.h_view_3d.scene)
 
         h_scatter = scatter(parent=self.h_view_3d.scene)
         h_scatter.set_gl_state('translucent')
@@ -229,20 +291,72 @@ class SessionData:
 
         h_scatter.symbol = visuals.marker_types[10]
 
-    def init_zbow_2d_plot(self):
-        import scatter2D
+        parent.move(new_window_position.x(), new_window_position.y())
+        parent.show()
 
-        # old way
-        rgb_data = self.custom_ternary.as_matrix()
-        color_data = self.custom_transformed.as_matrix()
 
-        position = (0.5*self.screen_size[0], 0.5*self.screen_size[1])
+    def zbow_2d_plot(self, parent, scale, color):
+        from vispy import app, visuals, scene
+        from vispy.color import Color, ColorArray
+        import helper
+        # @TODO need to parse user options here for data
+        # @TODO Add matplotlib stacked bar graph for cluster %
 
-        scatter2D.scatter_2d(rgb_data, color_data, position=position)
+        new_window_position = parent.pos()
 
-        # new way with library
-        # data_copy = self.custom_transformed[['RFP', 'CFP', 'YFP']]
-        # rgb_data = [tuple(x) for x in data_copy.values]
-        # color_data = self.custom_transformed.as_matrix()
-        # scatter2D.scatter_2d(rgb_data, color_data)
+        # get scale data: scale_list = ['custom', 'default', 'linear']
+        if scale == 0:
+            scale_data = self.custom_ternary.as_matrix()
+        elif scale == 1:
+            scale_data = self.default_ternary[['RFP', 'YFP', 'CFP']].as_matrix()
+        elif scale == 2:
+            scale_data = self.linear_ternary[['RFP', 'YFP', 'CFP']].as_matrix()
 
+        # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
+        if color == 0:
+            color_data = self.custom_transformed.as_matrix()
+        elif color == 1:
+            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+        elif color == 2:
+            # color_data = self.pseudo_color # @TODO Need to define cluster color
+            pseudo_color = helper.distinguishable_colors(max(self.auto_cluster_idx) + 1)
+            print('Scale data length is ', scale_data.shape[0], '\n')
+            color_data = [None] * scale_data.shape[0]
+            for i in range(0, scale_data.shape[0]):
+                color_data[i] = pseudo_color[self.auto_cluster_idx[i]]
+        elif color == 3:
+            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+
+        # build your visuals
+        scatter = scene.visuals.create_visual_node(visuals.MarkersVisual)
+
+        # build canvas
+        self.h_canvas_2d = scene.SceneCanvas(title='zbow 2D ternary plot',
+                                             keys='interactive',
+                                             show=True,
+                                             bgcolor=Color([1, 1, 1, 1]),
+                                             )
+
+        parent.setCentralWidget(self.h_canvas_2d.native)
+
+        # Add a ViewBox to let the user zoom/rotate
+        view = self.h_canvas_2d.central_widget.add_view()
+        view.camera = 'panzoom'
+
+        h_scatter = scatter(parent=view.scene)
+        # p1.set_gl_state('translucent', blend=True, depth_test=True)
+        h_scatter.set_gl_state('translucent', blend=True, depth_test=False)
+
+        cell_color = ColorArray(color=color_data, alpha=1)
+        # @BUG I want to use a different alpha here, but Vispy has a bug where you can see through the main canvas with alpha
+
+        h_scatter.set_data(pos=scale_data,
+                           symbol='o',
+                           size=5,
+                           edge_width=0,
+                           face_color=cell_color)
+
+        h_scatter.symbol = visuals.marker_types[10]
+
+        parent.move(new_window_position.x(), new_window_position.y())
+        parent.show()
