@@ -83,6 +83,10 @@ class Main(Ui_MainWindow):
 
         # connect options
         self.scatterColorOption.activated.connect(self.update_plots)
+        self.scatterScaleOption.activated.connect(self.update_plots)
+
+        self.ternColorOption.activated.connect(self.update_plots)
+        self.ternScaleOption.activated.connect(self.update_plots)
 
     def load_data(self):
         # @TODO Add loading timer dialog box
@@ -139,6 +143,7 @@ class Main(Ui_MainWindow):
     def cluster_data(self):
         # auto cluster the data
         self.data.auto_cluster(self.clusterOnData.currentIndex())
+        self.update_plots()
 
     def add_center(self):
         print('not done yet')
@@ -156,6 +161,11 @@ class Main(Ui_MainWindow):
         self.data.zbow_3d_plot(self.scatter3DWindow,
                                scale=self.scatterScaleOption.currentIndex(),
                                color=self.scatterColorOption.currentIndex(),
+                               update=True)
+
+        self.data.zbow_2d_plot(self.tern2DWindow,
+                               scale=self.ternScaleOption.currentIndex(),
+                               color=self.ternColorOption.currentIndex(),
                                update=True)
 
 

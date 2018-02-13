@@ -5,3 +5,7 @@ make sure things work with Windows and MacOS
 make icon something zebrabow-y!
 
 3D scatter has some antialiasing bugs that haven't been fixed in vispy. Ignore for now.
+
+make axes for 2D ternary plot appear and center the graph better.
+
+Weird bug when changing parameters for the 3D scatter plot. Initially, the scale seems to change

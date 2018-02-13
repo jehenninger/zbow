@@ -33,8 +33,6 @@ class SessionData:
         self.auto_cluster_idx = []
         self.tab_cluster_data = pd.Series
 
-
-
         self.h_canvas_3d = None
         self.h_view_3d = None
         self.view_3d_options = {}
@@ -168,23 +166,30 @@ class SessionData:
         from sklearn.cluster import DBSCAN
 
         # cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary', 'default rgb', 'linear']
-
+        eps_tern = 0.01
+        eps_transformed = 0.05
         if cluster_on_data == 0:
             data = self.custom_ternary
+            eps = eps_tern
         elif cluster_on_data == 1:
             data = self.custom_transformed[['RFP', 'YFP', 'CFP']]
+            eps = eps_transformed
         elif cluster_on_data == 2:
             data = self.default_ternary
+            eps = eps_tern
         elif cluster_on_data == 3:
             data = self.default_transformed[['RFP', 'YFP', 'CFP']]
+            eps = eps_transformed
         elif cluster_on_data == 4:
             data = self.linear_ternary
+            eps = eps_tern
         elif cluster_on_data == 5:
             data = self.linear_transformed[['RFP', 'YFP', 'CFP']]
+            eps = eps_transformed
 
-        auto_cluster_data = DBSCAN(eps=0.01, n_jobs=-1).fit_predict(data.as_matrix())
+        auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
         max_cluster = max(auto_cluster_data)
-
+        # @TODO Change the non-clustered cells to always choose 'gray' as their color
         #DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for the time being
         for k in range(0, len(auto_cluster_data)):
             if auto_cluster_data[k] == -1:
@@ -216,7 +221,6 @@ class SessionData:
 
         if update:
             options = self.h_view_3d.camera.get_state()
-            print(options)
 
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
@@ -232,10 +236,8 @@ class SessionData:
         elif color == 1:
             color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
         elif color == 2:
-            print(self.tab_cluster_data)
             if self.tab_cluster_data.empty:
                 color_data = helper.distinguishable_colors(1)
-
             else:
                 pseudo_color = helper.distinguishable_colors(self.tab_cluster_data['id'].count())
 
@@ -259,7 +261,7 @@ class SessionData:
         # Add a ViewBox to let the user zoom/rotate
         # @TODO Find a way to store the current view so that it is not reset when settings are changed
 
-        default_options = {'fov': 5, 'distance': 25, 'elevation': 30, 'azimuth': 130}
+        default_options = {'fov': 5, 'distance': 25, 'elevation': 30, 'azimuth': 130, 'scale_factor': 3.0}
         if update:
             self.h_view_3d = self.h_canvas_3d.central_widget.add_view()
             self.h_view_3d.camera = 'turntable'
@@ -272,6 +274,7 @@ class SessionData:
             self.h_view_3d.camera.distance = default_options['distance']
             self.h_view_3d.camera.elevation = default_options['elevation']
             self.h_view_3d.camera.azimuth = default_options['azimuth']
+            self.h_view_3d.camera.scale_factor = default_options['scale_factor']
 
         # plot 3D RGB axis
         scene.visuals.XYZAxis(parent=self.h_view_3d.scene)
@@ -295,22 +298,25 @@ class SessionData:
         parent.show()
 
 
-    def zbow_2d_plot(self, parent, scale, color):
+    def zbow_2d_plot(self, parent, scale, color, update=False):
         from vispy import app, visuals, scene
         from vispy.color import Color, ColorArray
         import helper
-        # @TODO need to parse user options here for data
+        # @TODO make axes and center the plot better
         # @TODO Add matplotlib stacked bar graph for cluster %
 
         new_window_position = parent.pos()
+
+        if update:
+            options = self.h_view_2d.camera.get_state()
 
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
             scale_data = self.custom_ternary.as_matrix()
         elif scale == 1:
-            scale_data = self.default_ternary[['RFP', 'YFP', 'CFP']].as_matrix()
+            scale_data = self.default_ternary.as_matrix()
         elif scale == 2:
-            scale_data = self.linear_ternary[['RFP', 'YFP', 'CFP']].as_matrix()
+            scale_data = self.linear_ternary.as_matrix()
 
         # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
         if color == 0:
@@ -318,12 +324,14 @@ class SessionData:
         elif color == 1:
             color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
         elif color == 2:
-            # color_data = self.pseudo_color # @TODO Need to define cluster color
-            pseudo_color = helper.distinguishable_colors(max(self.auto_cluster_idx) + 1)
-            print('Scale data length is ', scale_data.shape[0], '\n')
-            color_data = [None] * scale_data.shape[0]
-            for i in range(0, scale_data.shape[0]):
-                color_data[i] = pseudo_color[self.auto_cluster_idx[i]]
+            if self.tab_cluster_data.empty:
+                color_data = helper.distinguishable_colors(1)
+            else:
+                pseudo_color = helper.distinguishable_colors(self.tab_cluster_data['id'].count())
+
+                color_data = [None] * scale_data.shape[0]
+                for i in range(0, scale_data.shape[0]):
+                    color_data[i] = pseudo_color[self.auto_cluster_idx[i]]
         elif color == 3:
             color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
 
@@ -340,10 +348,15 @@ class SessionData:
         parent.setCentralWidget(self.h_canvas_2d.native)
 
         # Add a ViewBox to let the user zoom/rotate
-        view = self.h_canvas_2d.central_widget.add_view()
-        view.camera = 'panzoom'
+        if update:
+            self.h_view_2d = self.h_canvas_2d.central_widget.add_view()
+            self.h_view_2d.camera = 'panzoom'
+            self.h_view_2d.camera.set_state(options)
+        else:
+            self.h_view_2d = self.h_canvas_2d.central_widget.add_view()
+            self.h_view_2d.camera = 'panzoom'
 
-        h_scatter = scatter(parent=view.scene)
+        h_scatter = scatter(parent=self.h_view_2d.scene)
         # p1.set_gl_state('translucent', blend=True, depth_test=True)
         h_scatter.set_gl_state('translucent', blend=True, depth_test=False)
 
