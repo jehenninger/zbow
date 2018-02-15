@@ -95,7 +95,6 @@ class SessionData:
         self.custom_transformed = logicle.custom_transform_data(self.raw, custom_params)
         self.custom_transformed = self.normalize_transform(self.custom_transformed)
 
-        # @START JON - make sure we get linear values in the correct order that we want
         self.linear_transformed = self.raw[linear_params]
         self.linear_transformed = self.normalize_transform(self.linear_transformed)
 
@@ -211,6 +210,123 @@ class SessionData:
         print('Number of clusters: ', self.tab_cluster_data['id'].count(), '\n')
         print('Tab cluster data: \n', self.tab_cluster_data, '\n')
 
+    def decision_graph(self, cluster_on_data):
+
+        # cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary', 'default rgb', 'linear']
+
+        if cluster_on_data == 0:
+            data = self.custom_ternary
+        elif cluster_on_data == 1:
+            data = self.custom_transformed[['RFP', 'YFP', 'CFP']]
+        elif cluster_on_data == 2:
+            data = self.default_ternary
+        elif cluster_on_data == 3:
+            data = self.default_transformed[['RFP', 'YFP', 'CFP']]
+        elif cluster_on_data == 4:
+            data = self.linear_ternary
+        elif cluster_on_data == 5:
+            data = self.linear_transformed[['RFP', 'YFP', 'CFP']]
+
+        self.rho_delta(data.as_matrix(), 1.0)
+
+    def rho_delta(self, data, percent):
+        from scipy import spatial
+        import itertools
+
+        # get pairwise distances
+        dist = spatial.distance.pdist(data, 'euclidean')
+        # dist = spatial.distance.squareform(distxx)
+
+        # ND: number of data points
+        nd = data.shape[0]
+        nc = data.shape[1]
+
+        n = dist.shape[0]
+
+        position = round(n * percent / 100)
+        sda = np.sort(dist)
+        dc = sda[position]
+        print('Computing Rho with gaussian kernel of radius: %12.6f\n' % (dc))
+
+        # try without squareform
+        # @START HERE: Looks like this is slow, look into numpy.vectorize()
+        pair_idx = list(itertools.combinations(range(nd), nc))
+        print(pair_idx, '\n')
+
+        def gauss_func(single_dist, cutoff):
+            output = np.exp(-np.square(single_dist/cutoff))
+
+            return output
+
+        def get_index_of_tuples_with_cell_distance(input_list, value, num_of_observations):
+            from itertools import compress
+            distance_idx = [None]*input_list.__len__()
+            for pos, t in enumerate(input_list):
+                if t[0] == value or t[1] == value:  # we always expect 2-tuples because it's pairwise distances
+                    distance_idx[pos] = True
+                else:
+                    distance_idx[pos] = False
+
+            distance_output = list(compress(range(len(distance_idx)), distance_idx))
+            return distance_output
+
+        # get indices of where each cell distance begins
+
+        tuple_idx = [None] * nd
+        for j in range(0, nd):
+            tuple_idx[j] = get_index_of_tuples_with_cell_distance(pair_idx, j, nd)
+
+        # loop over number of data points, calculate gaussian distance, and sum for Rho
+        rho = [None]*nd
+        for i in range(0, nd):
+            temp_data = dist[tuple_idx[i]]
+            rho_element = [None]*(nd-1)
+            for j, item in enumerate(temp_data):
+                rho_element[j] = gauss_func(item, dc)
+
+            rho[i] = sum(rho_element)
+
+            print(rho[i], '\n')
+
+
+
+
+        # N: number of point pairs/distance
+        # n = distxx.shape[0]
+
+
+
+        # rho = np.zeros(nd)
+        # # Gaussian kernel
+        # for i in range(nd - 1):
+        #     for j in range((i + 1), nd):
+        #         rho[i] = rho[i] + np.exp(-(dist[i, j] / dc) * (dist[i, j] / dc))
+        #         rho[j] = rho[j] + np.exp(-(dist[i, j] / dc) * (dist[i, j] / dc))
+        #
+        # print('Rho is:\n ', rho, '\n')
+        #
+        #
+        # maxd = dist.max()
+        # ordrho = (-rho).argsort()
+        # delta = np.zeros(nd)
+        # nneigh = np.zeros(nd)
+        # delta[ordrho[0]] = -1
+        # nneigh[ordrho[0]] = 0
+        #
+        # for ii in range(1, nd):
+        #     delta[ordrho[ii]] = maxd
+        #     for jj in range(ii):
+        #         if dist[ordrho[ii], ordrho[jj]] < delta[ordrho[ii]]:
+        #             delta[ordrho[ii]] = dist[ordrho[ii], ordrho[jj]]
+        #             nneigh[ordrho[ii]] = ordrho[jj]
+        #
+        # delta[ordrho[0]] = delta.max()
+        #
+        # print('Delta is:\n ', delta, '\n')
+        # print('Nneigh is:\n ', nneigh, '\n')
+        #
+        # return rho, delta, nneigh
+
     def zbow_3d_plot(self, parent, scale, color, update=False):
         from vispy import app, visuals, scene
         from vispy.color import Color, ColorArray
@@ -259,8 +375,6 @@ class SessionData:
         parent.setCentralWidget(self.h_canvas_3d.native)
 
         # Add a ViewBox to let the user zoom/rotate
-        # @TODO Find a way to store the current view so that it is not reset when settings are changed
-
         default_options = {'fov': 5, 'distance': 25, 'elevation': 30, 'azimuth': 130, 'scale_factor': 3.0}
         if update:
             self.h_view_3d = self.h_canvas_3d.central_widget.add_view()

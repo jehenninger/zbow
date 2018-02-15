@@ -30,7 +30,7 @@ class Main(Ui_MainWindow):
         self.tern2DWindow = scatterWindow()
 
         # initialize fields and defaults
-        self.clusterSampleSize.setText("10000")
+        self.clusterSampleSize.setText("1000")
 
         cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary',
                              'default rgb', 'linear ternary', 'linear rgb']
@@ -91,9 +91,13 @@ class Main(Ui_MainWindow):
     def load_data(self):
         # @TODO Add loading timer dialog box
         # @TODO Add shortcut for menu items, like loading data
-
+        import pandas as pd
         self.data.screen_size = self.screen_size
         self.data.OS = self.OS
+
+        # reinitialize auto_cluster data
+        self.data.tab_cluster_data = pd.Series
+        self.data.auto_cluster_idx = []
 
         # load fcs file
         sample_size = self.clusterSampleSize.text()
@@ -143,6 +147,8 @@ class Main(Ui_MainWindow):
     def cluster_data(self):
         # auto cluster the data
         self.data.auto_cluster(self.clusterOnData.currentIndex())
+        self.data.decision_graph(self.clusterOnData.currentIndex())
+
         self.update_plots()
 
     def add_center(self):
