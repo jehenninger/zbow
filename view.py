@@ -4,7 +4,7 @@ import re
 from itertools import chain
 
 
-def initParamTable(parameter_table, params):
+def init_param_table(parameter_table, params):
 
     expected_params_labels = ['FSC-A',
                               'FSC-H',
@@ -65,4 +65,20 @@ def initParamTable(parameter_table, params):
 
     return combo_box_list
 
+
+def update_cluster_table(cluster_table, tab_cluster_data):
+    #@START HERE: Weird 5 at the end of the table. Also add color to the id slot and clean things up so that they look nice
+    num_of_clusters = tab_cluster_data.shape
+    num_of_clusters = num_of_clusters[0]
+
+    cluster_table.setRowCount(num_of_clusters)
+
+    for c in range(0, num_of_clusters):
+        cluster_id = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['id']))
+        num_of_cells = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['num of cells']))
+        percentage = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['percentage']))
+
+        cluster_table.setItem(c, 0, cluster_id)
+        cluster_table.setItem(c, 1, num_of_cells)
+        cluster_table.setItem(c, 2, percentage)
 

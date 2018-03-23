@@ -63,7 +63,7 @@ class Main(Ui_MainWindow):
 
         self.clusterInformationTable.setRowCount(1)
         self.clusterInformationTable.setColumnCount(5)
-        cluster_info_column_header = ['color', 'id', '# of cells', '% total', 'mean sil']
+        cluster_info_column_header = ['id', '# of cells', '% total', 'mean sil']
         self.clusterInformationTable.setHorizontalHeaderLabels(cluster_info_column_header)
 
         # connect menu items
@@ -80,6 +80,7 @@ class Main(Ui_MainWindow):
         self.highlightClusterPushButton.clicked.connect(self.highlight_cluster)
         self.drawGatePushButton.clicked.connect(self.draw_gate)
         self.updateParams.clicked.connect(self.update_params)
+        self.splitCluster.clicked.connect(self.split_cluster)
 
         # connect options
         self.scatterColorOption.activated.connect(self.update_plots)
@@ -105,7 +106,7 @@ class Main(Ui_MainWindow):
         self.data.fcs_read(sample_size)
 
         # fill parameter table
-        self.data.param_combo_box_list = view.initParamTable(self.parameterTable, self.data.params)
+        self.data.param_combo_box_list = view.init_param_table(self.parameterTable, self.data.params)
 
         # transform data
         self.data.transform_data()
@@ -147,7 +148,8 @@ class Main(Ui_MainWindow):
     def cluster_data(self):
         # auto cluster the data
         self.data.auto_cluster(self.clusterOnData.currentIndex())
-        self.data.decision_graph(self.clusterOnData.currentIndex())
+        view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
+        # self.data.decision_graph(self.clusterOnData.currentIndex())
 
         self.update_plots()
 
@@ -158,6 +160,9 @@ class Main(Ui_MainWindow):
         print('not done yet')
 
     def highlight_cluster(self):
+        print('not done yet')
+
+    def split_cluster(self):
         print('not done yet')
 
     def draw_gate(self):

@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(955, 734)
+        MainWindow.resize(955, 762)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
@@ -107,6 +107,9 @@ class Ui_MainWindow(object):
         self.clusterMethod = QtWidgets.QComboBox(self.clusterOptionsBox)
         self.clusterMethod.setObjectName("clusterMethod")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.clusterMethod)
+        self.splitCluster = QtWidgets.QPushButton(self.clusterOptionsBox)
+        self.splitCluster.setObjectName("splitCluster")
+        self.formLayout.setWidget(9, QtWidgets.QFormLayout.FieldRole, self.splitCluster)
         self.horizontalLayout_2.addWidget(self.clusterOptionsBox)
         self.plotOptionsBox = QtWidgets.QGroupBox(self.groupBox_2)
         self.plotOptionsBox.setObjectName("plotOptionsBox")
@@ -226,6 +229,7 @@ class Ui_MainWindow(object):
         self.removeCenterPushButton.setText(_translate("MainWindow", "remove center"))
         self.highlightClusterPushButton.setText(_translate("MainWindow", "highlight cluster"))
         self.label.setText(_translate("MainWindow", "cluster method"))
+        self.splitCluster.setText(_translate("MainWindow", "split cluster"))
         self.plotOptionsBox.setTitle(_translate("MainWindow", "plot options"))
         self.label_6.setText(_translate("MainWindow", "3D scatter options"))
         self.label_7.setText(_translate("MainWindow", "color"))

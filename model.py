@@ -22,6 +22,7 @@ class SessionData:
         self.params = tuple
         self.raw = pd.DataFrame
         self.data_size = int
+        self.noise_cluster_idx = int
         self.default_transformed = pd.DataFrame
         self.linear_transformed = pd.DataFrame
         self.default_ternary = pd.DataFrame
@@ -189,23 +190,41 @@ class SessionData:
         auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
         max_cluster = max(auto_cluster_data)
         # @TODO Change the non-clustered cells to always choose 'gray' as their color
-        #DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for the time being
+        #DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for the time being.
+        # remember that we also change the 'id' to 'noise' in the cluster table using this index as well
         for k in range(0, len(auto_cluster_data)):
             if auto_cluster_data[k] == -1:
                 auto_cluster_data[k] = max_cluster + 1
 
+        self.noise_cluster_idx = max_cluster + 1
         self.auto_cluster_idx = auto_cluster_data
         self.cluster_data_idx = auto_cluster_data
+
+        cluster_num = max(auto_cluster_data) + 1
+        mean_cluster_color = pd.DataFrame(data=None, columns=['R', 'G', 'B'])
+        for j in range(0, cluster_num):
+            mean_cluster_color.loc[j, 'R'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'RFP'])
+            mean_cluster_color.loc[j, 'G'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'YFP'])
+            mean_cluster_color.loc[j, 'B'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'CFP'])
+
+        print('Mean cluster color is: \n')
+        print(mean_cluster_color)
 
         cluster_data = pd.Series(auto_cluster_data)
         cluster_data_counts = cluster_data.value_counts(normalize=False, sort=True, ascending=False)
         cluster_data_freq = cluster_data.value_counts(normalize=True, sort=True, ascending=False)
         cluster_data_freq = 100 * cluster_data_freq
 
-        tab_cluster_data = {'id': cluster_data_counts.index, 'num of cells': cluster_data_counts,
+        tab_cluster_data = {'id': cluster_data_counts.index,
+                            'mean R': mean_cluster_color['R'],
+                            'mean G': mean_cluster_color['G'],
+                            'mean B': mean_cluster_color['B'],
+                            'num of cells': cluster_data_counts,
                             'percentage': cluster_data_freq}
 
         self.tab_cluster_data = pd.DataFrame(tab_cluster_data)
+        self.tab_cluster_data.loc[self.noise_cluster_idx, 'id'] = 'noise'  #if we change where the noise cluster is, must change this
+        self.tab_cluster_data = self.tab_cluster_data.sort_values(by="percentage", ascending=False)
 
         print('Number of clusters: ', self.tab_cluster_data['id'].count(), '\n')
         print('Tab cluster data: \n', self.tab_cluster_data, '\n')
@@ -356,7 +375,7 @@ class SessionData:
                 color_data = helper.distinguishable_colors(1)
             else:
                 pseudo_color = helper.distinguishable_colors(self.tab_cluster_data['id'].count())
-
+                pseudo_color[self.noise_cluster_idx] = "#646464"
                 color_data = [None] * scale_data.shape[0]
                 for i in range(0, scale_data.shape[0]):
                     color_data[i] = pseudo_color[self.auto_cluster_idx[i]]
@@ -442,6 +461,7 @@ class SessionData:
                 color_data = helper.distinguishable_colors(1)
             else:
                 pseudo_color = helper.distinguishable_colors(self.tab_cluster_data['id'].count())
+                pseudo_color[self.noise_cluster_idx] = "#646464"
 
                 color_data = [None] * scale_data.shape[0]
                 for i in range(0, scale_data.shape[0]):
