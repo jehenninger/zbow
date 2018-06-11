@@ -1,5 +1,7 @@
 # methods
 from PyQt5 import QtWidgets
+from PyQt5 import QtGui
+from PyQt5 import QtCore
 import re
 from itertools import chain
 
@@ -67,7 +69,6 @@ def init_param_table(parameter_table, params):
 
 
 def update_cluster_table(cluster_table, tab_cluster_data):
-    #@START HERE: Weird 5 at the end of the table. Also add color to the id slot and clean things up so that they look nice
     num_of_clusters = tab_cluster_data.shape
     num_of_clusters = num_of_clusters[0]
 
@@ -77,8 +78,30 @@ def update_cluster_table(cluster_table, tab_cluster_data):
         cluster_id = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['id']))
         num_of_cells = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['num of cells']))
         percentage = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['percentage']))
+        mean_sil = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['mean sil']))
+
+        cluster_color_r = tab_cluster_data.iloc[c]['mean R'] * 255
+        cluster_color_g = tab_cluster_data.iloc[c]['mean G'] * 255
+        cluster_color_b = tab_cluster_data.iloc[c]['mean B'] * 255
 
         cluster_table.setItem(c, 0, cluster_id)
+        cluster_id.setBackground(QtGui.QColor(cluster_color_r, cluster_color_g, cluster_color_b))
+        cluster_id.setForeground(QtGui.QColor('white'))
+        cluster_id.setTextAlignment(QtCore.Qt.AlignCenter)
+
         cluster_table.setItem(c, 1, num_of_cells)
+        num_of_cells.setTextAlignment(QtCore.Qt.AlignRight)
+
         cluster_table.setItem(c, 2, percentage)
+        percentage.setTextAlignment(QtCore.Qt.AlignRight)
+
+        cluster_table.setItem(c, 3, mean_sil)
+        mean_sil.setTextAlignment(QtCore.Qt.AlignRight)
+
+        # color background of silhouette values if they are below a threshold of 0.6
+        if tab_cluster_data.iloc[c]['mean sil'] > 0.6:
+            mean_sil.setBackground(QtGui.QColor(0, 200, 0, 50))
+        else:
+            mean_sil.setBackground(QtGui.QColor(200, 0, 0, 50))
+
 

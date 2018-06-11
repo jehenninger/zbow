@@ -62,7 +62,7 @@ class Main(Ui_MainWindow):
         self.parameterTable.setHorizontalHeaderLabels(parameter_column_header)
 
         self.clusterInformationTable.setRowCount(1)
-        self.clusterInformationTable.setColumnCount(5)
+        self.clusterInformationTable.setColumnCount(4)
         cluster_info_column_header = ['id', '# of cells', '% total', 'mean sil']
         self.clusterInformationTable.setHorizontalHeaderLabels(cluster_info_column_header)
 
@@ -93,6 +93,7 @@ class Main(Ui_MainWindow):
         # @TODO Add loading timer dialog box
         # @TODO Add shortcut for menu items, like loading data
         import pandas as pd
+
         self.data.screen_size = self.screen_size
         self.data.OS = self.OS
 
@@ -163,7 +164,12 @@ class Main(Ui_MainWindow):
         print('not done yet')
 
     def split_cluster(self):
-        print('not done yet')
+        cluster_to_split = self.clusterInformationTable.selectedItems()
+        cluster_to_split = cluster_to_split[0].text()
+        if cluster_to_split is not 'noise'
+            cluster_to_split = int(cluster_to_split)
+
+        self.data.split_cluster_in_two(cluster_to_split)
 
     def draw_gate(self):
         print('not done yet')

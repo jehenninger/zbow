@@ -9,3 +9,5 @@ make icon something zebrabow-y!
 make axes for 2D ternary plot appear and center the graph better.
 
 Weird bug when changing parameters for the 3D scatter plot. Initially, the scale seems to change
+
+add cluster plot and bar plot
