@@ -75,10 +75,8 @@ class Main(Ui_MainWindow):
         # connect buttons
         self.removeOutliers.clicked.connect(self.remove_outliers)
         self.clusterPushButton.clicked.connect(self.cluster_data)
-        self.addCenterPushButton.clicked.connect(self.add_center)
-        self.removeCenterPushButton.clicked.connect(self.remove_center)
+        self.joinClusterPushButton.clicked.connect(self.join_cluster)
         self.highlightClusterPushButton.clicked.connect(self.highlight_cluster)
-        self.drawGatePushButton.clicked.connect(self.draw_gate)
         self.updateParams.clicked.connect(self.update_params)
         self.splitCluster.clicked.connect(self.split_cluster)
 
@@ -154,11 +152,30 @@ class Main(Ui_MainWindow):
 
         self.update_plots()
 
-    def add_center(self):
-        print('not done yet')
+    def join_cluster(self):
+        table_object = self.clusterInformationTable.selectedItems()
+        clusters_to_join = []
 
-    def remove_center(self):
-        print('not done yet')
+        for i in range(0, len(table_object)):
+            temp_table_object = table_object[i].text()
+
+            if 'noise' in str(temp_table_object):
+                print('Can not join noise cluster')  # TODO change this to a dialog message box
+                con = False
+                break
+            else:
+                clusters_to_join.append(temp_table_object)
+                clusters_to_join[i] = int(clusters_to_join[i])
+                con = True
+
+        if con:
+            self.data.join_clusters_together(clusters_to_join, self.clusterOnData.currentIndex())
+
+            view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
+            self.update_plots()
+
+
+
 
     def highlight_cluster(self):
         print('not done yet')
@@ -177,9 +194,6 @@ class Main(Ui_MainWindow):
 
             view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
             self.update_plots()
-
-    def draw_gate(self):
-        print('not done yet')
 
     def update_plots(self):
         self.data.zbow_3d_plot(self.scatter3DWindow,

@@ -182,17 +182,19 @@ class SessionData:
         return(data)
 
     def make_tabulated_cluster_data(self):
-        cluster_num = max(self.cluster_data_idx) + 1
+        # cluster_num = max(self.cluster_data_idx) + 1
+        cluster_num = len(set(self.cluster_data_idx))
+        old_cluster_id = set(self.cluster_data_idx)
 
         mean_cluster_color = pd.DataFrame(data=None, columns=['R', 'G', 'B'])
         mean_sil = []
         cluster_id = []
-        for j in range(0, cluster_num):
-            mean_cluster_color.loc[j, 'R'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'RFP'])
-            mean_cluster_color.loc[j, 'G'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'YFP'])
-            mean_cluster_color.loc[j, 'B'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'CFP'])
+        for j, val in enumerate(old_cluster_id):
+            mean_cluster_color.loc[j, 'R'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == val, 'RFP'])
+            mean_cluster_color.loc[j, 'G'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == val, 'YFP'])
+            mean_cluster_color.loc[j, 'B'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == val, 'CFP'])
 
-            sil_idx = self.cluster_data_idx == j
+            sil_idx = self.cluster_data_idx == val
             sil_data = self.cluster_eval[sil_idx]
             mean_sil_data = np.mean(sil_data)
             mean_sil_data = round(mean_sil_data, 3)
@@ -214,11 +216,10 @@ class SessionData:
                             'percentage': cluster_data_freq,
                             'mean sil': mean_sil}
 
+        # START HERE JON: When joining clusters, they no longer have contiguous cluster IDs, so I'm getting errors here. (Check enumerate loop above)
         self.tab_cluster_data = pd.DataFrame(data=tab_cluster_data)
         self.tab_cluster_data.loc[self.noise_cluster_idx, 'id'] = 'noise'  # if we change where the noise cluster is, must change this
         self.tab_cluster_data = self.tab_cluster_data.sort_values(by="percentage", ascending=False)
-        # self.tab_cluster_data = self.tab_cluster_data.reset_index(drop=True)
-        print("Debug")
 
     def evaluate_cluster_solution(self, data):
         from sklearn import metrics
@@ -255,7 +256,7 @@ class SessionData:
 
         cluster_data_idx = self.cluster_data_idx
         data = self.get_data_to_cluster_on(cluster_on_data)
-        split_idx = self.cluster_data_idx == cluster_to_split
+        split_idx = cluster_data_idx == cluster_to_split
         split_data = data[split_idx]
 
         kmeans_idx = cluster.KMeans(n_clusters=2).fit_predict(split_data)
@@ -277,6 +278,30 @@ class SessionData:
 
         self.evaluate_cluster_solution(data)
         self.make_tabulated_cluster_data()
+
+    def join_clusters_together(self, clusters_to_join, cluster_on_data):
+        cluster_data_idx = self.cluster_data_idx
+        num_of_clusters = max(cluster_data_idx) + 1
+        data = self.get_data_to_cluster_on(cluster_on_data)
+
+        num_of_clusters_to_join = len(clusters_to_join)
+
+        join_idx = [x in clusters_to_join for x in cluster_data_idx]
+
+        # make all joined cluster idxs to be max(clust) + 1
+        cluster_data_idx[join_idx] = num_of_clusters + 1
+
+        # need to figure out how many clusters we took out below the noise cluster
+        below_noise_count  = sum(clusters_to_join < self.noise_cluster_idx)
+        self.noise_cluster_idx = self.noise_cluster_idx - below_noise_count
+
+        self.evaluate_cluster_solution(data)
+        self.make_tabulated_cluster_data()
+
+
+        print('Debug')
+
+
 
     def zbow_3d_plot(self, parent, scale, color, update=False):
         from vispy import app, visuals, scene
