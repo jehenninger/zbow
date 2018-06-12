@@ -80,9 +80,9 @@ def update_cluster_table(cluster_table, tab_cluster_data):
         percentage = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['percentage']))
         mean_sil = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['mean sil']))
 
-        cluster_color_r = tab_cluster_data.iloc[c]['mean R'] * 255
-        cluster_color_g = tab_cluster_data.iloc[c]['mean G'] * 255
-        cluster_color_b = tab_cluster_data.iloc[c]['mean B'] * 255
+        cluster_color_r = int(tab_cluster_data.iloc[c]['mean R'] * 255)
+        cluster_color_g = int(tab_cluster_data.iloc[c]['mean G'] * 255)
+        cluster_color_b = int(tab_cluster_data.iloc[c]['mean B'] * 255)
 
         cluster_table.setItem(c, 0, cluster_id)
         cluster_id.setBackground(QtGui.QColor(cluster_color_r, cluster_color_g, cluster_color_b))

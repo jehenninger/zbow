@@ -30,7 +30,7 @@ class Main(Ui_MainWindow):
         self.tern2DWindow = scatterWindow()
 
         # initialize fields and defaults
-        self.clusterSampleSize.setText("1000")
+        self.clusterSampleSize.setText("5000")
 
         cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary',
                              'default rgb', 'linear ternary', 'linear rgb']
@@ -166,10 +166,17 @@ class Main(Ui_MainWindow):
     def split_cluster(self):
         cluster_to_split = self.clusterInformationTable.selectedItems()
         cluster_to_split = cluster_to_split[0].text()
-        if cluster_to_split is not 'noise'
-            cluster_to_split = int(cluster_to_split)
+        print('cluster to split \n', cluster_to_split)
 
-        self.data.split_cluster_in_two(cluster_to_split)
+        if 'noise' in str(cluster_to_split):
+            print('Can not split noise cluster')  # TODO change this to a dialog message box
+
+        else:
+            cluster_to_split = int(cluster_to_split)
+            self.data.split_cluster_in_two(cluster_to_split, self.clusterOnData.currentIndex())
+
+            view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
+            self.update_plots()
 
     def draw_gate(self):
         print('not done yet')

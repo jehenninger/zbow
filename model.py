@@ -30,9 +30,10 @@ class SessionData:
         self.custom_ternary = pd.DataFrame
         self.linear_ternary = pd.DataFrame
         self.param_combo_box_list = list
-        self.cluster_data_idx = []
-        self.auto_cluster_idx = []
-        self.tab_cluster_data = pd.Series
+        self.cluster_data_idx = [] # this will always be the most up-to-date clustering solution
+        self.auto_cluster_idx = [] # this will always be the original auto clustering solution
+        self.tab_cluster_data = pd.DataFrame
+        self.cluster_eval = []
 
         self.h_canvas_3d = None
         self.h_view_3d = None
@@ -61,7 +62,7 @@ class SessionData:
         #                                                           directory='/Users/jon/Desktop',
         #                                                           filter='FCS file ( *.fcs);; Text file (*.tsv)')
 
-        self.file_name = '/Users/jon/Desktop/wkm_fish_018_006.myeloid.fcs'  # @DEBUG temporary to speed up debugging
+        self.file_name = '/Users/jon/Desktop/WKM_fish_023_023_cfp+yfp+ or rfp+_myeloid.fcs'  # @DEBUG temporary to speed up debugging
         # @TODO make sure that we output the data in tab-separated format, otherwise change this
 
         self.path_name = os.path.dirname(os.path.abspath(self.file_name))
@@ -162,41 +163,77 @@ class SessionData:
 
         return tern_coords
 
-    def auto_cluster(self, cluster_on_data):
-        # from sklearn.cluster import DBSCAN
-        from sklearn import metrics
-        import hdbscan
-
-        # cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary', 'default rgb', 'linear']
-        eps_tern = 0.01
-        eps_transformed = 0.05
+    def get_data_to_cluster_on(self, cluster_on_data):
         if cluster_on_data == 0:
             data = self.custom_ternary
-            eps = eps_tern
         elif cluster_on_data == 1:
             data = self.custom_transformed[['RFP', 'YFP', 'CFP']]
-            eps = eps_transformed
         elif cluster_on_data == 2:
             data = self.default_ternary
-            eps = eps_tern
         elif cluster_on_data == 3:
             data = self.default_transformed[['RFP', 'YFP', 'CFP']]
-            eps = eps_transformed
         elif cluster_on_data == 4:
             data = self.linear_ternary
-            eps = eps_tern
         elif cluster_on_data == 5:
             data = self.linear_transformed[['RFP', 'YFP', 'CFP']]
-            eps = eps_transformed
+        else:
+            print('Could not retrieve data')  # TODO make dialog error message here
 
+        return(data)
+
+    def make_tabulated_cluster_data(self):
+        cluster_num = max(self.cluster_data_idx) + 1
+
+        mean_cluster_color = pd.DataFrame(data=None, columns=['R', 'G', 'B'])
+        mean_sil = []
+        cluster_id = []
+        for j in range(0, cluster_num):
+            mean_cluster_color.loc[j, 'R'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'RFP'])
+            mean_cluster_color.loc[j, 'G'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'YFP'])
+            mean_cluster_color.loc[j, 'B'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'CFP'])
+
+            sil_idx = self.cluster_data_idx == j
+            sil_data = self.cluster_eval[sil_idx]
+            mean_sil_data = np.mean(sil_data)
+            mean_sil_data = round(mean_sil_data, 3)
+
+            mean_sil.append(mean_sil_data)
+            cluster_id.append(int(j))
+
+        cluster_data = pd.Series(self.cluster_data_idx)
+        cluster_data_counts = cluster_data.value_counts(normalize=False)
+        cluster_data_freq = cluster_data.value_counts(normalize=True)
+        cluster_data_freq = round(100 * cluster_data_freq, 1)
+
+        # cluster_data_counts.index
+        tab_cluster_data = {'id': cluster_id,
+                            'mean R': mean_cluster_color['R'],
+                            'mean G': mean_cluster_color['G'],
+                            'mean B': mean_cluster_color['B'],
+                            'num of cells': cluster_data_counts,
+                            'percentage': cluster_data_freq,
+                            'mean sil': mean_sil}
+
+        self.tab_cluster_data = pd.DataFrame(data=tab_cluster_data)
+        self.tab_cluster_data.loc[self.noise_cluster_idx, 'id'] = 'noise'  # if we change where the noise cluster is, must change this
+        self.tab_cluster_data = self.tab_cluster_data.sort_values(by="percentage", ascending=False)
+        # self.tab_cluster_data = self.tab_cluster_data.reset_index(drop=True)
+        print("Debug")
+
+    def evaluate_cluster_solution(self, data):
+        from sklearn import metrics
+        # evaluate clustering solution
+        self.cluster_eval = metrics.silhouette_samples(data.as_matrix(), self.cluster_data_idx)
+
+    def auto_cluster(self, cluster_on_data):
+        # from sklearn.cluster import DBSCAN
+        import hdbscan
+
+        data = self.get_data_to_cluster_on(cluster_on_data)
         # auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
         auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=25, min_samples=1)
         auto_cluster_data = auto_cluster_method.fit_predict(data.as_matrix())
         max_cluster = max(auto_cluster_data)
-
-        # evaluate clustering solution
-        cluster_eval = metrics.silhouette_samples(data.as_matrix(), auto_cluster_data)
-        print('\n', 'Cluster evaluation', '\n', cluster_eval, '\n')
 
         #DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for the time being.
         # remember that we also change the 'id' to 'noise' in the cluster table using this index as well
@@ -208,45 +245,38 @@ class SessionData:
         self.auto_cluster_idx = auto_cluster_data
         self.cluster_data_idx = auto_cluster_data
 
-        cluster_num = max(auto_cluster_data) + 1
-        mean_cluster_color = pd.DataFrame(data=None, columns=['R', 'G', 'B'])
-        mean_sil = []
-        for j in range(0, cluster_num):
-            mean_cluster_color.loc[j, 'R'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'RFP'])
-            mean_cluster_color.loc[j, 'G'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'YFP'])
-            mean_cluster_color.loc[j, 'B'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == j, 'CFP'])
+        self.evaluate_cluster_solution(data)
+        self.make_tabulated_cluster_data()
 
-            sil_idx = auto_cluster_data == j
-            sil_data = cluster_eval[sil_idx]
-            mean_sil_data = np.mean(sil_data)
-            mean_sil_data = round(mean_sil_data, 3)
+    def split_cluster_in_two(self, cluster_to_split, cluster_on_data):
+        from sklearn import cluster
 
-            mean_sil.append(mean_sil_data)
+        # cluster_to_split = self.tab_cluster_data[self.tab_cluster_data['id'] == cluster_to_split].index[0]
 
-        cluster_data = pd.Series(auto_cluster_data)
-        cluster_data_counts = cluster_data.value_counts(normalize=False)
-        cluster_data_freq = cluster_data.value_counts(normalize=True)
-        cluster_data_freq = round(100 * cluster_data_freq, 1)
+        cluster_data_idx = self.cluster_data_idx
+        data = self.get_data_to_cluster_on(cluster_on_data)
+        split_idx = self.cluster_data_idx == cluster_to_split
+        split_data = data[split_idx]
 
-        tab_cluster_data = {'id': cluster_data_counts.index,
-                            'mean R': mean_cluster_color['R'],
-                            'mean G': mean_cluster_color['G'],
-                            'mean B': mean_cluster_color['B'],
-                            'num of cells': cluster_data_counts,
-                            'percentage': cluster_data_freq,
-                            'mean sil': mean_sil}
+        kmeans_idx = cluster.KMeans(n_clusters=2).fit_predict(split_data)
 
-        self.tab_cluster_data = pd.DataFrame(tab_cluster_data)
-        self.tab_cluster_data.loc[self.noise_cluster_idx, 'id'] = 'noise'  #if we change where the noise cluster is, must change this
-        self.tab_cluster_data = self.tab_cluster_data.sort_values(by="percentage", ascending=False)
-        self.tab_cluster_data.reset_index(drop=True)
+        # loop through kmeans_idx to replace 0 with -1 and 1 with the cluster_to_split. Then, we will re-write
+        #  all cluster numbers to add 1
 
-        print('Number of clusters: ', self.tab_cluster_data['id'].count(), '\n')
-        print('Tab cluster data: \n', self.tab_cluster_data, '\n')
+        for i in range(0, len(kmeans_idx)):
+            if kmeans_idx[i] == 0:
+                kmeans_idx[i] = -1
+            elif kmeans_idx[i] == 1:
+                kmeans_idx[i] = cluster_to_split
 
-    def split_cluster_in_two(self, cluster_to_split):
-        #JON START HERE: need to handle if "noise" is passed through
-        print('cluster to split', cluster_to_split)
+        cluster_data_idx[split_idx] = kmeans_idx
+        cluster_data_idx = cluster_data_idx + 1
+        self.cluster_data_idx = cluster_data_idx
+
+        self.noise_cluster_idx = self.noise_cluster_idx + 1  # because we added a cluster
+
+        self.evaluate_cluster_solution(data)
+        self.make_tabulated_cluster_data()
 
     def zbow_3d_plot(self, parent, scale, color, update=False):
         from vispy import app, visuals, scene
@@ -280,7 +310,7 @@ class SessionData:
                 pseudo_color[self.noise_cluster_idx] = "#646464"
                 color_data = [None] * scale_data.shape[0]
                 for i in range(0, scale_data.shape[0]):
-                    color_data[i] = pseudo_color[self.auto_cluster_idx[i]]
+                    color_data[i] = pseudo_color[self.cluster_data_idx[i]]
         elif color == 3:
             color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
 
