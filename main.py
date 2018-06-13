@@ -65,6 +65,7 @@ class Main(Ui_MainWindow):
         self.clusterInformationTable.setColumnCount(4)
         cluster_info_column_header = ['id', '# of cells', '% total', 'mean sil']
         self.clusterInformationTable.setHorizontalHeaderLabels(cluster_info_column_header)
+        self.clusterInformationTable.cellDoubleClicked.connect(self.highlight_cluster)
 
         # connect menu items
         self.actionLoad.triggered.connect(self.load_data)
@@ -148,6 +149,8 @@ class Main(Ui_MainWindow):
         # auto cluster the data
         self.data.auto_cluster(self.clusterOnData.currentIndex())
         view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
+
+
         # self.data.decision_graph(self.clusterOnData.currentIndex())
 
         self.update_plots()
@@ -174,11 +177,32 @@ class Main(Ui_MainWindow):
             view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
             self.update_plots()
 
-
-
-
     def highlight_cluster(self):
-        print('not done yet')
+        table_object = self.clusterInformationTable.selectedItems()
+        clusters_to_highlight = []
+
+        for i in range(0, len(table_object)):
+            temp_table_object = table_object[i].text()
+
+            if 'noise' in str(temp_table_object):
+                clusters_to_highlight.append(int(self.data.noise_cluster_idx))
+            else:
+                clusters_to_highlight.append(temp_table_object)
+                clusters_to_highlight[i] = int(clusters_to_highlight[i])
+
+        highlight_cells = [x in clusters_to_highlight for x in self.data.cluster_data_idx]
+
+        self.data.zbow_3d_plot(self.scatter3DWindow,
+                               scale=self.scatterScaleOption.currentIndex(),
+                               color=4,
+                               update=True,
+                               highlight_cells=highlight_cells)
+
+        self.data.zbow_2d_plot(self.tern2DWindow,
+                               scale=self.ternScaleOption.currentIndex(),
+                               color=4,
+                               update=True,
+                               highlight_cells=highlight_cells)
 
     def split_cluster(self):
         cluster_to_split = self.clusterInformationTable.selectedItems()

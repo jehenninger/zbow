@@ -163,6 +163,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.clusterInformationTable.sizePolicy().hasHeightForWidth())
         self.clusterInformationTable.setSizePolicy(sizePolicy)
+        self.clusterInformationTable.setEditTriggers(QtWidgets.QAbstractItemView.DoubleClicked)
         self.clusterInformationTable.setShowGrid(False)
         self.clusterInformationTable.setObjectName("clusterInformationTable")
         self.clusterInformationTable.setColumnCount(0)

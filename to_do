@@ -11,3 +11,10 @@ make axes for 2D ternary plot appear and center the graph better.
 Weird bug when changing parameters for the 3D scatter plot. Initially, the scale seems to change
 
 add cluster plot and bar plot
+
+add ways to modify the HDBSCAN settings (slider or text box for parameters?)
+
+add 'show cluster ids' toggle, which maybe also puts a bounding box around each cluster on the ternary plot? Also puts
+text number.
+
+add contour plot to ternary graph

@@ -76,8 +76,13 @@ def update_cluster_table(cluster_table, tab_cluster_data):
 
     for c in range(0, num_of_clusters):
         cluster_id = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['id']))
+        #cluster_id.setFlags(QtCore.Qt.ItemIsSelectable)
+        cluster_id.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+
         num_of_cells = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['num of cells']))
+
         percentage = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['percentage']))
+
         mean_sil = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['mean sil']))
 
         cluster_color_r = int(tab_cluster_data.iloc[c]['mean R'] * 255)
@@ -104,4 +109,4 @@ def update_cluster_table(cluster_table, tab_cluster_data):
         else:
             mean_sil.setBackground(QtGui.QColor(200, 0, 0, 50))
 
-
+    # cluster_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers & QtWidgets.QAbstractItemView.DoubleClicked)
