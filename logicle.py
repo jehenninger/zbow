@@ -1,7 +1,10 @@
+import numpy as np
+import pandas as pd
+import math
+import subprocess
+
+
 def default_transform_data(raw, params):
-    import numpy as np
-    import pandas as pd
-    import subprocess
 
     t = 262144
     m = 4.5
@@ -13,6 +16,9 @@ def default_transform_data(raw, params):
 
     transformed_data = {}
 
+    num_of_chunks = int(math.ceil(len(raw)/1000))  # find how many chunks of 1000 we need
+    raw_chunks = np.array_split(raw, num_of_chunks)
+
     for p in params:
         w.append((m - np.log10(t / np.abs(np.min(raw[p])))) / 2)
 
@@ -20,31 +26,36 @@ def default_transform_data(raw, params):
             w[count] = 0
 
         # default transform
-        command = ['bin/logicle/logicle.out']
+
         transform_parameters = [t.__str__(), w[count].__str__(), m.__str__(), a.__str__()]
 
-        data = raw[p].tolist()
-        data_as_string = [str(i) for i in data]
+        temp_data = []
+        for j in range(num_of_chunks):
+            command = ['bin/logicle/logicle.out']
+            data = raw_chunks[j]
+            data = data[p].tolist()
+            data_as_string = [str(i) for i in data]
 
-        command.extend(transform_parameters)
-        command.extend(data_as_string)
+            command.extend(transform_parameters)
+            command.extend(data_as_string)
 
-        output = subprocess.run(command, stdout=subprocess.PIPE)
+            output = subprocess.run(command, stdout=subprocess.PIPE)
+            temp_data_chunk = output.stdout.decode("utf-8").splitlines()
+            temp_data_chunk = [float(i) for i in temp_data_chunk]
 
-        temp_data = output.stdout.decode("utf-8").splitlines()
-        temp_data = [float(i) for i in temp_data]
+            temp_data.extend(temp_data_chunk)
 
         transformed_data.update({p: temp_data})
 
         count = count + 1
 
     transformed_data = pd.DataFrame(data=transformed_data, columns=params)
+
+    print('Debug')
     return transformed_data
 
 
 def custom_transform_data(raw, params):
-    import pandas as pd
-    import subprocess
 
     t = 262144
     m = 4.5
@@ -56,27 +67,37 @@ def custom_transform_data(raw, params):
 
     transformed_data = {}
 
+
+    # need to break data into chunks to not overload the command line
+    num_of_chunks = int(math.ceil(len(raw)/500))  # find how many chunks of 1000 we need
+
     for p in params:
 
         # custom transform
-        command = ['bin/logicle/logicle.out']
+
         transform_parameters = [t.__str__(), w[count].__str__(), m.__str__(), a.__str__()]
 
-        data = raw[p].tolist()
-        data_as_string = [str(i) for i in data]
+        raw_chunks = np.array_split(raw, num_of_chunks)
+        temp_data = []
+        for j in range(num_of_chunks):
+            command = ['bin/logicle/logicle.out']
+            data = raw_chunks[j]
+            data = data[p].tolist()
+            data_as_string = [str(i) for i in data]
 
-        command.extend(transform_parameters)
-        command.extend(data_as_string)
+            command.extend(transform_parameters)
+            command.extend(data_as_string)
 
-        output = subprocess.run(command, stdout=subprocess.PIPE)
+            output = subprocess.run(command, stdout=subprocess.PIPE)
 
-        temp_data = output.stdout.decode("utf-8").splitlines()
-        temp_data = [float(i) for i in temp_data]
+            temp_data_chunk = output.stdout.decode("utf-8").splitlines()
+            temp_data_chunk = [float(i) for i in temp_data_chunk]
+
+            temp_data.extend(temp_data_chunk)
 
         transformed_data.update({p: temp_data})
 
         count = count + 1
-
 
     transformed_data = pd.DataFrame(data=transformed_data, columns=params)
     return transformed_data

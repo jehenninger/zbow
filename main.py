@@ -4,6 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from window import Ui_MainWindow
 import model
 import view
+import pandas as pd
 
 
 class scatterWindow(QtWidgets.QMainWindow):
@@ -30,7 +31,7 @@ class Main(Ui_MainWindow):
         self.tern2DWindow = scatterWindow()
 
         # initialize fields and defaults
-        self.clusterSampleSize.setText("5000")
+        self.clusterSampleSize.setText("10000")
 
         cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary',
                              'default rgb', 'linear ternary', 'linear rgb']
@@ -66,6 +67,8 @@ class Main(Ui_MainWindow):
         cluster_info_column_header = ['id', '# of cells', '% total', 'mean sil']
         self.clusterInformationTable.setHorizontalHeaderLabels(cluster_info_column_header)
         self.clusterInformationTable.cellDoubleClicked.connect(self.highlight_cluster)
+        self.clusterInformationTable.cellClicked.connect(self.highlight_cluster_in_table)
+
 
         # connect menu items
         self.actionLoad.triggered.connect(self.load_data)
@@ -80,6 +83,7 @@ class Main(Ui_MainWindow):
         self.highlightClusterPushButton.clicked.connect(self.highlight_cluster)
         self.updateParams.clicked.connect(self.update_params)
         self.splitCluster.clicked.connect(self.split_cluster)
+        self.viewOutliersButton.clicked.connect(self.view_outliers)
 
         # connect options
         self.scatterColorOption.activated.connect(self.update_plots)
@@ -112,7 +116,8 @@ class Main(Ui_MainWindow):
         self.data.transform_data()
 
         # print successful load and display number of cells
-        self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' cells')
+        self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
+                               self.data.raw.shape[0].__str__() + ' sampled cells)')
 
 
         # initialize 2D and 3D zbow graph
@@ -129,6 +134,8 @@ class Main(Ui_MainWindow):
                                scale=self.ternScaleOption.currentIndex(),
                                color=self.ternColorOption.currentIndex())
 
+        self.cluster_data()
+
 
     def update_params(self):
         print('not done yet')
@@ -137,19 +144,68 @@ class Main(Ui_MainWindow):
         print('not done yet')
 
     def save_data(self):
-        print('not done yet')
+
+        # get directory to save to
+        self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
+                                                                           directory=os.path.dirname(self.data.file_name))
+
+        self.data.tab_cluster_data.to_pickle(path=os.path.join(self.data.save_folder,
+                                                               self.data.sample_name + '_Summary.pkl'),
+                                             compression=None)
+        self.data.tab_cluster_data.to_excel(os.path.join(self.data.save_folder,
+                                                         self.data.sample_name + '_Summary.xlsx'),
+                                            index=False)
+
+        pd.Series(self.data.cluster_data_idx).to_pickle(path=os.path.join(self.data.save_folder,
+                                                                          self.data.sample_name + '_cluster_solution.pkl'),
+                                                        compression=None)
+
+        pd.Series(self.data.cluster_data_idx).to_csv(path=os.path.join(self.data.save_folder,
+                                                                      self.data.sample_name + '_cluster_solution.csv'),
+                                                     index=False, header=False)
 
     def restore_data(self):
         print('not done yet')
 
+    def view_outliers(self):
+        outliers = self.data.get_outliers()
+
+        self.data.zbow_3d_plot(self.scatter3DWindow,
+                               scale=self.scatterScaleOption.currentIndex(),
+                               color=4,
+                               update=True,
+                               highlight_cells=outliers,
+                               highlight_color=True)
+
+        self.data.zbow_2d_plot(self.tern2DWindow,
+                               scale=self.ternScaleOption.currentIndex(),
+                               color=4,
+                               update=True,
+                               highlight_cells=outliers,
+                               highlight_color=True)
+
     def remove_outliers(self):
-        print('not done yet')
+        outliers = self.data.get_outliers()
+        outliers = pd.Series(outliers, name='bools')
+
+        if self.data.raw_filtered.empty: # this will make sure that you can do multiple rounds of removing outliers
+            self.data.raw_filtered = self.data.raw
+
+        self.data.raw_filtered = self.data.raw_filtered[~outliers.values] # want to remove outliers, not keep them!
+
+        self.data.transform_data(outliers_removed=True)
+
+        self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
+                               self.data.raw_filtered.shape[0].__str__() + ' sampled cells)')
+
+        self.cluster_data()
+
+        self.update_plots()
 
     def cluster_data(self):
         # auto cluster the data
         self.data.auto_cluster(self.clusterOnData.currentIndex())
         view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
-
 
         # self.data.decision_graph(self.clusterOnData.currentIndex())
 
@@ -158,7 +214,7 @@ class Main(Ui_MainWindow):
     def join_cluster(self):
         table_object = self.clusterInformationTable.selectedItems()
         clusters_to_join = []
-
+        # TODO handle situations where nothing is selected!
         for i in range(0, len(table_object)):
             temp_table_object = table_object[i].text()
 
@@ -203,6 +259,19 @@ class Main(Ui_MainWindow):
                                color=4,
                                update=True,
                                highlight_cells=highlight_cells)
+
+    def highlight_cluster_in_table(self):
+        current_cell = self.clusterInformationTable.selectedItems()
+
+        current_cell = current_cell[0]
+        cell_color = current_cell.background()
+        cell_color = cell_color.color()
+        r = cell_color.red()
+        g = cell_color.green()
+        b = cell_color.blue()
+
+        self.clusterInformationTable.setStyleSheet('selection-background-color: rgba(' +
+                                                   str(r) + ', ' + str(g) + ', ' + str(b) + ', 65)')
 
     def split_cluster(self):
         cluster_to_split = self.clusterInformationTable.selectedItems()

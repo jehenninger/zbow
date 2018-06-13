@@ -17,10 +17,12 @@ class SessionData:
         self.OS = str
         self.screen_size = []
         self.file_name = str
+        self.save_folder = str
         self.sample_name = str
         self.path_name = str
         self.params = tuple
         self.raw = pd.DataFrame
+        self.raw_filtered = pd.DataFrame
         self.data_size = int
         self.noise_cluster_idx = int
         self.default_transformed = pd.DataFrame
@@ -34,6 +36,7 @@ class SessionData:
         self.auto_cluster_idx = [] # this will always be the original auto clustering solution
         self.tab_cluster_data = pd.DataFrame
         self.cluster_eval = []
+        self.outlier_scores = []
 
         self.h_canvas_3d = None
         self.h_view_3d = None
@@ -60,11 +63,11 @@ class SessionData:
         # @TODO Save the pathname and use an if statement so that if the program is kept open, it will re-open the
         # previous path
 
-        # self.file_name, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Select flow cytometry file',
-        #                                                           directory='/Users/jon/Desktop',
-        #                                                           filter='FCS file ( *.fcs);; Text file (*.tsv)')
+        self.file_name, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Select flow cytometry file',
+                                                                  directory='/Users/jon/Desktop',
+                                                                  filter='FCS file ( *.fcs);; Text file (*.tsv)')
 
-        self.file_name = '/Users/jon/Desktop/WKM_fish_023_023_cfp+yfp+ or rfp+_myeloid.fcs'  # @DEBUG temporary to speed up debugging
+        #self.file_name ='/Users/jon/Desktop/WKM_fish_023_023_cfp+yfp+ or rfp+_myeloid.fcs'  # @DEBUG temporary to speed up debugging
         # @TODO make sure that we output the data in tab-separated format, otherwise change this
 
         self.path_name = os.path.dirname(os.path.abspath(self.file_name))
@@ -80,7 +83,7 @@ class SessionData:
         if sample_size < self.data_size:
             self.raw = self.raw.sample(sample_size, replace=False)
 
-    def transform_data(self):
+    def transform_data(self, outliers_removed=False):
         import logicle
         # initialize outputs
 
@@ -93,13 +96,18 @@ class SessionData:
         custom_params = [self.params[j] for j in custom_param_idx]
         linear_params = [self.params[k] for k in linear_param_idx]
 
-        self.default_transformed = logicle.default_transform_data(self.raw, default_params)
+        if outliers_removed:
+            data = self.raw_filtered
+        else:
+            data = self.raw
+
+        self.default_transformed = logicle.default_transform_data(data, default_params)
         self.default_transformed = self.normalize_transform(self.default_transformed)
 
-        self.custom_transformed = logicle.custom_transform_data(self.raw, custom_params)
+        self.custom_transformed = logicle.custom_transform_data(data, custom_params)
         self.custom_transformed = self.normalize_transform(self.custom_transformed)
 
-        self.linear_transformed = self.raw[linear_params]
+        self.linear_transformed = data[linear_params]
         self.linear_transformed = self.normalize_transform(self.linear_transformed)
 
         # rename columns for future functions:
@@ -165,6 +173,11 @@ class SessionData:
 
         return tern_coords
 
+    def get_outliers(self):
+        threshold = pd.Series(self.outlier_scores).quantile(0.99)
+        outliers = self.outlier_scores > threshold
+        return outliers
+
     def get_data_to_cluster_on(self, cluster_on_data):
         if cluster_on_data == 0:
             data = self.custom_ternary
@@ -226,6 +239,7 @@ class SessionData:
         self.tab_cluster_data = pd.DataFrame(data=tab_cluster_data)
         self.tab_cluster_data.loc[self.noise_cluster_idx, 'id'] = 'noise'  # if we change where the noise cluster is, must change this
         self.tab_cluster_data = self.tab_cluster_data.sort_values(by="percentage", ascending=False)
+        self.tab_cluster_data = self.tab_cluster_data[['id', 'num of cells', 'percentage', 'mean sil', 'mean R', 'mean G', 'mean B']]
 
     def evaluate_cluster_solution(self, data):
         from sklearn import metrics
@@ -238,12 +252,16 @@ class SessionData:
 
         data = self.get_data_to_cluster_on(cluster_on_data)
         # auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
-        auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=25, min_samples=1)
-        auto_cluster_data = auto_cluster_method.fit_predict(data.as_matrix())
+        auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=25, min_samples=1).fit(data.as_matrix())
+        auto_cluster_data = auto_cluster_method.labels_
+        self.outlier_scores = auto_cluster_method.outlier_scores_
+
         max_cluster = max(auto_cluster_data)
 
-        #DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for the time being.
-        # remember that we also change the 'id' to 'noise' in the cluster table using this index as well
+        # DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for
+        #  the time being. Remember that we also change the 'id' to 'noise' in the cluster
+        #  table using this index as well
+
         for k in range(0, len(auto_cluster_data)):
             if auto_cluster_data[k] == -1:
                 auto_cluster_data[k] = max_cluster + 1
@@ -307,7 +325,7 @@ class SessionData:
 
         print('Clusters to join: \n', clusters_to_join)
 
-    def zbow_3d_plot(self, parent, scale, color, update=False, highlight_cells=None):
+    def zbow_3d_plot(self, parent, scale, color, update=False, highlight_cells=None, highlight_color=False):
         from vispy import app, visuals, scene
         from vispy.color import Color, ColorArray
         import helper
@@ -346,7 +364,10 @@ class SessionData:
             color_data = np.empty([self.custom_transformed.shape[0], self.custom_transformed.shape[1]])
             color_data[:] = 0.3  # grey for non-highlighted cells
             highlight_cells = pd.Series(highlight_cells, name='bools')
-            color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values].as_matrix()
+            if highlight_color:
+                color_data[highlight_cells, :] = [0.9, 0.9, 0.9]
+            else:
+                color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values].as_matrix()
 
         if not update:
             # build your visuals
@@ -354,10 +375,10 @@ class SessionData:
 
             # build initial canvas if one doesn't exist
             self.h_canvas_3d = scene.SceneCanvas(title='zbow 3D scatter plot',
-                                             keys='interactive',
-                                             show=True,
-                                             bgcolor=Color([0, 0, 0, 1]),
-                                             )
+                                                 keys='interactive',
+                                                 show=True,
+                                                 bgcolor=Color([0, 0, 0, 1]),
+                                                 )
             parent.setCentralWidget(self.h_canvas_3d.native)
 
             # Add a ViewBox to let the user zoom/rotate
@@ -397,10 +418,10 @@ class SessionData:
         # @BUG I want to use a different alpha here, but Vispy has a bug where you can see through the main canvas with alpha
 
         self.h_scatter_3d.set_data(pos=scale_data,
-                           symbol='o',
-                           size=5,
-                           edge_width=0,
-                           face_color=cell_color)
+                                   symbol='o',
+                                   size=5,
+                                   edge_width=0,
+                                   face_color=cell_color)
 
         # h_scatter.symbol = visuals.marker_types[10]
 
@@ -408,7 +429,7 @@ class SessionData:
             parent.move(new_window_position.x(), new_window_position.y())
             parent.show()
 
-    def zbow_2d_plot(self, parent, scale, color, update=False, highlight_cells=None):
+    def zbow_2d_plot(self, parent, scale, color, update=False, highlight_cells=None, highlight_color=False):
         from vispy import app, visuals, scene
         from vispy.color import Color, ColorArray
         import helper
@@ -447,9 +468,13 @@ class SessionData:
             color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
         elif color == 4:
             color_data = np.empty([self.custom_transformed.shape[0], self.custom_transformed.shape[1]])
-            color_data[:] = 0.3  # grey for non-highlighted cells
+            color_data[:] = 0.8  # grey for non-highlighted cells
             highlight_cells = pd.Series(highlight_cells, name='bools')
-            color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values].as_matrix()
+            if highlight_color:
+                color_data[highlight_cells, :] = [0.2, 0.2, 0.2]
+            else:
+                color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][
+                    highlight_cells.values].as_matrix()
 
         if not update:
             # build your visuals
