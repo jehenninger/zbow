@@ -32,6 +32,8 @@ class Main(Ui_MainWindow):
 
         # initialize fields and defaults
         self.clusterSampleSize.setText("10000")
+        self.clusterMinClusterSize.setText("25")
+        self.clusterMinSamples.setText("1")
 
         cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary',
                              'default rgb', 'linear ternary', 'linear rgb']
@@ -84,6 +86,7 @@ class Main(Ui_MainWindow):
         self.updateParams.clicked.connect(self.update_params)
         self.splitCluster.clicked.connect(self.split_cluster)
         self.viewOutliersButton.clicked.connect(self.view_outliers)
+        self.evaluateClusteringCheckBox.clicked.connect(self.evaluate_clusters)
 
         # connect options
         self.scatterColorOption.activated.connect(self.update_plots)
@@ -135,7 +138,7 @@ class Main(Ui_MainWindow):
                                color=self.ternColorOption.currentIndex())
 
         self.cluster_data()
-
+        self.data.outliers_removed = False
 
     def update_params(self):
         print('not done yet')
@@ -144,7 +147,7 @@ class Main(Ui_MainWindow):
         print('not done yet')
 
     def save_data(self):
-
+        from datetime import datetime
         # get directory to save to
         self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
                                                                            directory=os.path.dirname(self.data.file_name))
@@ -152,20 +155,76 @@ class Main(Ui_MainWindow):
         self.data.tab_cluster_data.to_pickle(path=os.path.join(self.data.save_folder,
                                                                self.data.sample_name + '_Summary.pkl'),
                                              compression=None)
-        self.data.tab_cluster_data.to_excel(os.path.join(self.data.save_folder,
-                                                         self.data.sample_name + '_Summary.xlsx'),
-                                            index=False)
+        self.data.tab_cluster_data.to_csv(os.path.join(self.data.save_folder,
+                                                       self.data.sample_name + '_Summary.csv'),
+                                          index=False, header=True)
 
-        pd.Series(self.data.cluster_data_idx).to_pickle(path=os.path.join(self.data.save_folder,
-                                                                          self.data.sample_name + '_cluster_solution.pkl'),
-                                                        compression=None)
+        if self.data.outliers_removed:
+            cluster_solution = self.data.raw_filtered
+            cluster_solution.insert(0, 'clusterID', self.data.cluster_data_idx)
+        else:
+            cluster_solution = self.data.raw
+            cluster_solution.insert(loc=0, column='clusterID', value=pd.Series(self.data.cluster_data_idx))
 
-        pd.Series(self.data.cluster_data_idx).to_csv(path=os.path.join(self.data.save_folder,
-                                                                      self.data.sample_name + '_cluster_solution.csv'),
-                                                     index=False, header=False)
+        cluster_solution.to_pickle(path=os.path.join(self.data.save_folder,
+                                                     self.data.sample_name + '_cluster_solution.pkl'),
+                                   compression=None)
+
+        cluster_solution.to_csv(path_or_buf=os.path.join(self.data.save_folder,
+                                                         self.data.sample_name + '_cluster_solution.csv'),
+                                index=False, header=True)
+
+        metadata_output = {'fcs_file': self.data.file_name,
+                           'date_and_time': datetime.now(),
+                           'original_sample_size': self.data.data_size,
+                           'sample_size': cluster_solution.shape[0],
+                           'HDBSCAN_min_cluster_size': self.clusterMinClusterSize.text(),
+                           'HDBSCAN_min_samples': self.clusterMinSamples.text()
+                           }
+
+        metadata_output = pd.DataFrame.from_dict(metadata_output, orient='index')
+        metadata_output.to_csv(path_or_buf=os.path.join(self.data.save_folder,
+                                                        self.data.sample_name + '_metadata.csv'),
+                               index=True, header=False)
 
     def restore_data(self):
-        print('not done yet')
+        # reinitialize auto_cluster data
+        self.data.tab_cluster_data = pd.Series
+        self.data.auto_cluster_idx = []
+
+        # load fcs file
+        sample_size = self.clusterSampleSize.text()
+        sample_size = int(sample_size)
+        self.data.fcs_read(sample_size, reload=True)
+
+        # fill parameter table
+        self.data.param_combo_box_list = view.init_param_table(self.parameterTable, self.data.params)
+
+        # transform data
+        self.data.transform_data()
+
+
+        # initialize 2D and 3D zbow graph
+        default_position = [0.5 * self.screen_size[0], 0.05 * self.screen_size[1]]
+        self.scatter3DWindow.move(default_position[0], default_position[1])
+        # @TODO set default size of the 2D and 3D graphs so that they don't overlap
+        self.data.zbow_3d_plot(self.scatter3DWindow,
+                               scale=self.scatterScaleOption.currentIndex(),
+                               color=self.scatterColorOption.currentIndex())
+
+        default_position = [0.5 * self.screen_size[0], 0.5 * self.screen_size[1]]
+        self.tern2DWindow.move(default_position[0], default_position[1])
+        self.data.zbow_2d_plot(self.tern2DWindow,
+                               scale=self.ternScaleOption.currentIndex(),
+                               color=self.ternColorOption.currentIndex())
+
+
+        # print successful load and display number of cells
+        self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
+                               self.data.raw.shape[0].__str__() + ' sampled cells) - RELOADED')
+
+        self.cluster_data()
+        self.data.outliers_removed = False
 
     def view_outliers(self):
         outliers = self.data.get_outliers()
@@ -194,6 +253,7 @@ class Main(Ui_MainWindow):
         self.data.raw_filtered = self.data.raw_filtered[~outliers.values] # want to remove outliers, not keep them!
 
         self.data.transform_data(outliers_removed=True)
+        self.data.outliers_removed = True
 
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
                                self.data.raw_filtered.shape[0].__str__() + ' sampled cells)')
@@ -204,7 +264,11 @@ class Main(Ui_MainWindow):
 
     def cluster_data(self):
         # auto cluster the data
-        self.data.auto_cluster(self.clusterOnData.currentIndex())
+        eval_cluster_bool = self.evaluateClusteringCheckBox.isChecked()
+
+        self.data.auto_cluster(self.clusterOnData.currentIndex(), int(self.clusterMinClusterSize.text()),
+                               int(self.clusterMinSamples.text()), evaluate_cluster=eval_cluster_bool)
+
         view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
 
         # self.data.decision_graph(self.clusterOnData.currentIndex())
@@ -212,6 +276,8 @@ class Main(Ui_MainWindow):
         self.update_plots()
 
     def join_cluster(self):
+        eval_cluster_bool = self.evaluateClusteringCheckBox.isChecked()
+
         table_object = self.clusterInformationTable.selectedItems()
         clusters_to_join = []
         # TODO handle situations where nothing is selected!
@@ -228,7 +294,8 @@ class Main(Ui_MainWindow):
                 con = True
 
         if con:
-            self.data.join_clusters_together(clusters_to_join, self.clusterOnData.currentIndex())
+            self.data.join_clusters_together(clusters_to_join, self.clusterOnData.currentIndex(),
+                                             evaluate_cluster=eval_cluster_bool)
 
             view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
             self.update_plots()
@@ -274,7 +341,13 @@ class Main(Ui_MainWindow):
                                                    str(r) + ', ' + str(g) + ', ' + str(b) + ', 65)')
 
     def split_cluster(self):
+        eval_cluster_bool = self.evaluateClusteringCheckBox.isChecked()
+
         cluster_to_split = self.clusterInformationTable.selectedItems()
+        if len(cluster_to_split) > 1:
+            print('Warning: This function can only split one cluster at a time and chose the first selected cluster')
+            #TODO change this to a dialog message box
+
         cluster_to_split = cluster_to_split[0].text()
         print('cluster to split \n', cluster_to_split)
 
@@ -283,10 +356,21 @@ class Main(Ui_MainWindow):
 
         else:
             cluster_to_split = int(cluster_to_split)
-            self.data.split_cluster_in_two(cluster_to_split, self.clusterOnData.currentIndex())
+            self.data.split_cluster_in_two(cluster_to_split, self.clusterOnData.currentIndex(),
+                                           evaluate_cluster=eval_cluster_bool)
 
             view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
             self.update_plots()
+
+    def evaluate_clusters(self):
+        eval_cluster_bool = self.evaluateClusteringCheckBox.isChecked()
+
+        if eval_cluster_bool:
+            data = self.data.get_data_to_cluster_on(self.clusterOnData.currentIndex())
+
+            self.data.evaluate_cluster_solution(data)
+            self.data.make_tabulated_cluster_data()
+            view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
 
     def update_plots(self):
         self.data.zbow_3d_plot(self.scatter3DWindow,
@@ -299,9 +383,32 @@ class Main(Ui_MainWindow):
                                color=self.ternColorOption.currentIndex(),
                                update=True)
 
+    # def closeEvent(self, event):
+    #
+    #     self.save_pref()
+    #     can_exit = True
+    #
+    #     if can_exit:
+    #         event.accept()  # let the window close
+    #     else:
+    #         event.ignore()
+
+    def save_pref(self):
+        new_pref = {'sample_size': self.clusterSampleSize.text(),
+                    'HDBSCAN_min_cluster_size': self.clusterMinClusterSize.text(),
+                    'HDBSCAN_min_samples': self.clusterMinSamples.text()}
+
+        new_pref_output = pd.DataFrame.from_dict(new_pref, orient='index')
+
+        new_pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)
+
 
 if __name__ == "__main__":
+    import os
+    import pandas as pd
+
     app = QtWidgets.QApplication(sys.argv)
+
     screen = app.primaryScreen()
     size = screen.size()
     height = size.height()
@@ -311,5 +418,35 @@ if __name__ == "__main__":
     dialog.move(0.05*width, 0.1*height)
     prog = Main(dialog)
     prog.screen_size = [size.width(), size.height()]
+
+    app.aboutToQuit.connect(prog.save_pref)
+
+    # write/read preferences file
+    check_file = os.path.isfile('bin/pref.csv')
+
+    if check_file:
+        pref = pd.read_csv('bin/pref.csv', index_col=0, header=None)
+
+        cluster_sample_size = pref.loc['sample_size']
+        cluster_sample_size = cluster_sample_size.iloc[0]
+
+        cluster_min_cluster_size = pref.loc['HDBSCAN_min_cluster_size']
+        cluster_min_cluster_size = cluster_min_cluster_size.iloc[0]
+
+        cluster_min_samples = pref.loc['HDBSCAN_min_samples']
+        cluster_min_samples = cluster_min_samples.iloc[0]
+
+        prog.clusterSampleSize.setText(str(cluster_sample_size))
+        prog.clusterMinClusterSize.setText(str(cluster_min_cluster_size))
+        prog.clusterMinSamples.setText(str(cluster_min_samples))
+
+    else:
+        pref = {'sample_size': '20000',
+                'HDBSCAN_min_cluster_size': '25',
+                'HDBSCAN_min_samples': '1'}
+        pref_output = pd.DataFrame.from_dict(pref, orient='index')
+
+        pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)
+
     dialog.show()
     sys.exit(app.exec_())

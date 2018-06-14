@@ -83,7 +83,10 @@ def update_cluster_table(cluster_table, tab_cluster_data):
 
         percentage = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['percentage']))
 
-        mean_sil = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['mean sil']))
+        if tab_cluster_data.iloc[c]['mean sil'] == -2:
+            mean_sil = QtWidgets.QTableWidgetItem()
+        else:
+            mean_sil = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['mean sil']))
 
         cluster_color_r = int(tab_cluster_data.iloc[c]['mean R'] * 255)
         cluster_color_g = int(tab_cluster_data.iloc[c]['mean G'] * 255)
@@ -106,6 +109,8 @@ def update_cluster_table(cluster_table, tab_cluster_data):
         # color background of silhouette values if they are below a threshold of 0.6
         if tab_cluster_data.iloc[c]['mean sil'] > 0.6:
             mean_sil.setBackground(QtGui.QColor(0, 200, 0, 50))
+        elif tab_cluster_data.iloc[c]['mean sil'] == -2:
+            pass
         else:
             mean_sil.setBackground(QtGui.QColor(200, 0, 0, 50))
 

@@ -37,6 +37,7 @@ class SessionData:
         self.tab_cluster_data = pd.DataFrame
         self.cluster_eval = []
         self.outlier_scores = []
+        self.outliers_removed = bool
 
         self.h_canvas_3d = None
         self.h_view_3d = None
@@ -48,27 +49,18 @@ class SessionData:
 
     # methods
 
-    def fcs_read(self, sample_size):
-        # Old method to call command line
-        # command = '/Users/jon/PycharmProjects/zbow/fcs_read.py %s' % self.file_name
-        #
-        # process = subprocess.run(command, stdout=subprocess.PIPE, shell=True)
-        # return_code = process.returncode
-        # output = process.stdout
-        # print('Python2 finished with return code %d\n' % return_code)
-        # return output
+    def fcs_read(self, sample_size, reload=False):
 
         import fcsparser
 
-        # @TODO Save the pathname and use an if statement so that if the program is kept open, it will re-open the
-        # previous path
-
-        self.file_name, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Select flow cytometry file',
-                                                                  directory='/Users/jon/Desktop',
-                                                                  filter='FCS file ( *.fcs);; Text file (*.tsv)')
+        if reload:
+            pass
+        else:
+            self.file_name, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Select flow cytometry file',
+                                                                      directory='/Users/jon/Desktop',
+                                                                      filter='FCS file ( *.fcs);; Text file (*.csv)')
 
         #self.file_name ='/Users/jon/Desktop/WKM_fish_023_023_cfp+yfp+ or rfp+_myeloid.fcs'  # @DEBUG temporary to speed up debugging
-        # @TODO make sure that we output the data in tab-separated format, otherwise change this
 
         self.path_name = os.path.dirname(os.path.abspath(self.file_name))
         self.sample_name = os.path.basename(self.file_name)
@@ -212,7 +204,8 @@ class SessionData:
             mean_cluster_color.loc[j, 'B'] = np.mean(self.custom_transformed.loc[self.cluster_data_idx == val, 'CFP'])
 
             sil_idx = self.cluster_data_idx == val
-            sil_data = self.cluster_eval[sil_idx]
+            sil_idx = pd.Series(sil_idx, name='bools')
+            sil_data = self.cluster_eval[sil_idx.values]
             mean_sil_data = np.mean(sil_data)
             mean_sil_data = round(mean_sil_data, 3)
 
@@ -246,13 +239,13 @@ class SessionData:
         # evaluate clustering solution
         self.cluster_eval = metrics.silhouette_samples(data.as_matrix(), self.cluster_data_idx)
 
-    def auto_cluster(self, cluster_on_data):
+    def auto_cluster(self, cluster_on_data, min_cluster_size=25, min_samples=1, evaluate_cluster=False):
         # from sklearn.cluster import DBSCAN
         import hdbscan
 
         data = self.get_data_to_cluster_on(cluster_on_data)
         # auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
-        auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=25, min_samples=1).fit(data.as_matrix())
+        auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples).fit(data.as_matrix())
         auto_cluster_data = auto_cluster_method.labels_
         self.outlier_scores = auto_cluster_method.outlier_scores_
 
@@ -270,10 +263,15 @@ class SessionData:
         self.auto_cluster_idx = auto_cluster_data
         self.cluster_data_idx = auto_cluster_data
 
-        self.evaluate_cluster_solution(data)
+        if evaluate_cluster:
+            self.evaluate_cluster_solution(data)
+        else:
+            self.cluster_eval = [-2] * len(self.cluster_data_idx)  # make default -2 to identify later
+            self.cluster_eval = pd.Series(self.cluster_eval)
+
         self.make_tabulated_cluster_data()
 
-    def split_cluster_in_two(self, cluster_to_split, cluster_on_data):
+    def split_cluster_in_two(self, cluster_to_split, cluster_on_data, evaluate_cluster=False):
         from sklearn import cluster
 
         # cluster_to_split = self.tab_cluster_data[self.tab_cluster_data['id'] == cluster_to_split].index[0]
@@ -300,30 +298,36 @@ class SessionData:
 
         self.noise_cluster_idx = self.noise_cluster_idx + 1  # because we added a cluster
 
-        self.evaluate_cluster_solution(data)
+        if evaluate_cluster:
+            self.evaluate_cluster_solution(data)
+        else:
+            self.cluster_eval = [-2] * len(self.cluster_data_idx)  # make default -2 to identify later
+            self.cluster_eval = pd.Series(self.cluster_eval)
+
         self.make_tabulated_cluster_data()
 
-    def join_clusters_together(self, clusters_to_join, cluster_on_data):
-        cluster_data_idx = self.cluster_data_idx
+    def join_clusters_together(self, clusters_to_join, cluster_on_data, evaluate_cluster=False):
         # num_of_clusters = max(cluster_data_idx) + 1
         data = self.get_data_to_cluster_on(cluster_on_data)
 
         # num_of_clusters_to_join = len(clusters_to_join)
 
-        join_idx = [x in clusters_to_join for x in cluster_data_idx]
+        join_idx = [x in clusters_to_join for x in self.cluster_data_idx]
 
         # make all joined cluster idxs to be the smallest cluster
-        cluster_data_idx[join_idx] = min(clusters_to_join)
+        self.cluster_data_idx[join_idx] = min(clusters_to_join)
 
         # need to figure out how many clusters we took out below the noise cluster
-        below_noise_count  = sum(clusters_to_join < self.noise_cluster_idx)
+        below_noise_count = sum(clusters_to_join < self.noise_cluster_idx)
         self.noise_cluster_idx = self.noise_cluster_idx - (below_noise_count-1)  # because we reduce 2 clusters to 1
 
-        self.evaluate_cluster_solution(data)
+        if evaluate_cluster:
+            self.evaluate_cluster_solution(data)
+        else:
+            self.cluster_eval = [-2] * len(self.cluster_data_idx)  # make default -2 to identify later
+            self.cluster_eval = pd.Series(self.cluster_eval)
+
         self.make_tabulated_cluster_data()
-
-
-        print('Clusters to join: \n', clusters_to_join)
 
     def zbow_3d_plot(self, parent, scale, color, update=False, highlight_cells=None, highlight_color=False):
         from vispy import app, visuals, scene
@@ -410,6 +414,19 @@ class SessionData:
             # plot 3D RGB axis
             scene.visuals.XYZAxis(parent=self.h_view_3d.scene)
 
+            # this isn't supported, apparently
+            # x_axis = scene.Axis(parent=self.h_view_3d.scene, pos=[[0, 0, 0], [1, 0, 0]],
+            #                          font_size=12, axis_color='k', tick_color='k', text_color='r',
+            #                          axis_width=3)
+            #
+            # y_axis = scene.Axis(parent=self.h_view_3d.scene, pos=[[0, 0, 0], [0, 1, 0]],
+            #                         font_size=12, axis_color='k', tick_color='k', text_color='g',
+            #                         axis_width=3)
+            #
+            # left_axis = scene.Axis(parent=self.h_view_3d.scene, pos=[[0, 0, 0], [0, 0, 1]], tick_direction=(1, -1),
+            #                        font_size=12, axis_color='k', tick_color='k', text_color='b',
+            #                        axis_width=3)
+
             self.h_scatter_3d = scatter(parent=self.h_view_3d.scene)
             self.h_scatter_3d.set_gl_state('translucent')
             # h_scatter.set_gl_state(blend=False, depth_test=True)
@@ -433,6 +450,7 @@ class SessionData:
         from vispy import app, visuals, scene
         from vispy.color import Color, ColorArray
         import helper
+        import scipy.stats as st
         # @TODO make axes and center the plot better
         # @TODO Add matplotlib stacked bar graph for cluster %
 
@@ -480,6 +498,8 @@ class SessionData:
             # build your visuals
             scatter = scene.visuals.create_visual_node(visuals.MarkersVisual)
 
+
+
             # build canvas
             self.h_canvas_2d = scene.SceneCanvas(title='zbow 2D ternary plot',
                                                  keys='interactive',
@@ -493,6 +513,7 @@ class SessionData:
         if not update:
             self.h_view_2d = self.h_canvas_2d.central_widget.add_view()
             self.h_view_2d.camera = 'panzoom'
+            self.h_view_2d.camera.set_range(x=(-0.2, 1.2), y=(-0.2, 1.2))
         # if update:
         #     self.h_view_2d = self.h_canvas_2d.central_widget.add_view()
         #     self.h_view_2d.camera = 'panzoom'
@@ -505,6 +526,20 @@ class SessionData:
         # p1.set_gl_state('translucent', blend=True, depth_test=True)
             self.h_scatter_2d.set_gl_state('translucent', blend=True, depth_test=False)
 
+            # plot 2D ternary axis
+
+            bottom_axis = scene.Axis(parent=self.h_view_2d.scene, pos=[[0, 0], [1, 0]], tick_direction=(0, 1),
+                                     font_size=12, axis_color='k', tick_color='k', tick_font_size=0,
+                                     axis_width=3, axis_label='red', axis_label_margin=20, axis_font_size=18)
+
+            right_axis = scene.Axis(parent=self.h_view_2d.scene, pos=[[1, 0], [0.5, 1]], tick_direction=(-1, -1),
+                                    font_size=12, axis_color='k', tick_color='k', tick_font_size=0,
+                                    axis_width=3, axis_label='green', axis_label_margin=20, axis_font_size=18)
+
+            left_axis = scene.Axis(parent=self.h_view_2d.scene, pos=[[0, 0], [0.5, 1]], tick_direction=(1, -1),
+                                   font_size=12, axis_color='k', tick_color='k', tick_font_size=0,
+                                   axis_width=3, axis_label='blue', axis_label_margin=20, axis_font_size=18)
+
         cell_color = ColorArray(color=color_data, alpha=1)
         # @BUG I want to use a different alpha here, but Vispy has a bug where you can see through the main canvas with alpha
 
@@ -514,9 +549,27 @@ class SessionData:
                                    edge_width=0,
                                    face_color=cell_color)
 
+        # make contour plot (this doesn't work currently. May just do it in export with matplotlib functionality).
+        # kernel = st.gaussian_kde(scale_data.transpose())
+        #
+        #
+        # xmin, xmax = 0, 1
+        # ymin, ymax = 0, 1
+        #
+        # xx, yy = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+        # positions = np.vstack([xx.ravel(), yy.ravel()])
+        #
+        #
+        # f = np.reshape(kernel(positions).T, xx.shape)
+        #
+        # mesh = scene.visuals.GridMesh(xx, yy, f)
+        #self.h_view_2d.add(mesh)
+
+
         # if not update:
         #     self.h_scatter_2d.symbol = visuals.marker_types[10]
 
         if not update:
             parent.move(new_window_position.x(), new_window_position.y())
             parent.show()
+

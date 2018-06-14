@@ -6,18 +6,19 @@ make icon something zebrabow-y!
 
 3D scatter has some antialiasing bugs that haven't been fixed in vispy. Ignore for now.
 
-make axes for 2D ternary plot appear and center the graph better.
-
-add cluster plot and bar plot
-
-add ways to modify the HDBSCAN settings (slider or text box for parameters?)
-
-add contour plot to ternary graph
+add cluster plot and bar plot (upon saving)
 
 add in ability to load prior clustering solution
 
-make clustering happen automatically with loading file? Maybe if sample size is under a certain level?
-
 add wait dialogs to everything
 
-evaluating clusters takes a lot of time with higher sample sizes. may want to disable this? or make it a check box?
+save backgate plots
+
+have preference file to change/save sample size and other user-changeable things?
+
+write the update_parameters function
+
+
+When loading the program, check for this metadata file and put in the correct parameters.
+
+Handle all situations when nothing is selected!
