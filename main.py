@@ -146,10 +146,27 @@ class Main(Ui_MainWindow):
         self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
                                                                            directory=os.path.dirname(self.data.file_name))
 
-        self.data.tab_cluster_data.to_pickle(path=os.path.join(self.data.save_folder,
-                                                               self.data.sample_name + '_Summary.pkl'),
-                                             compression=None)
-        self.data.tab_cluster_data.to_csv(os.path.join(self.data.save_folder,
+        # make subdirectories if they don't exist
+
+        if not os.path.isdir(os.path.join(self.data.save_folder, 'ternary_plots')):
+            os.makedirs(os.path.join(self.data.save_folder, 'ternary_plots'))
+
+        if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_backgates')):
+            os.makedirs(os.path.join(self.data.save_folder, 'cluster_backgates'))
+
+        if not os.path.isdir(os.path.join(self.data.save_folder, 'bar_graphs')):
+            os.makedirs(os.path.join(self.data.save_folder, 'bar_graphs'))
+
+        if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_solutions')):
+            os.makedirs(os.path.join(self.data.save_folder, 'cluster_solutions'))
+
+        if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_summaries')):
+            os.makedirs(os.path.join(self.data.save_folder, 'cluster_summaries'))
+
+        # self.data.tab_cluster_data.to_pickle(path=os.path.join(self.data.save_folder,
+        #                                                        self.data.sample_name + '_Summary.pkl'),
+        #                                      compression=None)
+        self.data.tab_cluster_data.to_csv(os.path.join(self.data.save_folder, 'cluster_summaries',
                                                        self.data.sample_name + '_Summary.csv'),
                                           index=False, header=True)
 
@@ -160,11 +177,11 @@ class Main(Ui_MainWindow):
             cluster_solution = self.data.raw
             cluster_solution.insert(loc=0, column='clusterID', value=pd.Series(self.data.cluster_data_idx))
 
-        cluster_solution.to_pickle(path=os.path.join(self.data.save_folder,
-                                                     self.data.sample_name + '_cluster_solution.pkl'),
-                                   compression=None)
+        # cluster_solution.to_pickle(path=os.path.join(self.data.save_folder,
+        #                                              self.data.sample_name + '_cluster_solution.pkl'),
+        #                            compression=None)
 
-        cluster_solution.to_csv(path_or_buf=os.path.join(self.data.save_folder,
+        cluster_solution.to_csv(path_or_buf=os.path.join(self.data.save_folder, 'cluster_solutions',
                                                          self.data.sample_name + '_cluster_solution.csv'),
                                 index=False, header=True)
 
@@ -178,7 +195,7 @@ class Main(Ui_MainWindow):
                            }
 
         metadata_output = pd.DataFrame.from_dict(metadata_output, orient='index')
-        metadata_output.to_csv(path_or_buf=os.path.join(self.data.save_folder,
+        metadata_output.to_csv(path_or_buf=os.path.join(self.data.save_folder, 'cluster_solutions',
                                                         self.data.sample_name + '_metadata.csv'),
                                index=True, header=False)
 

@@ -18,3 +18,5 @@ Handle all situations when nothing is selected!
 
 When the support is there, I would like to export the 3D Vispy graph as an interactive 3D graph that could be
 manipulated in powerpoint.
+
+may still need a way of removing extreme points

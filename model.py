@@ -659,17 +659,19 @@ class SessionData:
         # new way with library
         scale = 1
         figure, tern_plot = ternary.figure(scale=scale)
-        figure.set_size_inches(5, 5)
+        figure.set_size_inches(5.37, 5)
         figure.set_dpi(300)
-        tern_plot.set_title("ternary plot", fontsize=18)
+        # tern_plot.set_title("ternary plot", fontsize=18)
         tern_plot.boundary(linewidth=1.0)
         tern_plot.gridlines(multiple=0.1, color='grey')
 
-        tern_plot.scatter(scale_data, marker='o', color=color_data, s=4)
+        tern_plot.scatter(scale_data, marker='o', color=color_data, s=2)
 
         tern_plot.clear_matplotlib_ticks()
 
-        plt.contour(X, Y, Z, colors='k', alpha=0.6)
+        plt.contour(X, Y, Z, colors='k', alpha=0.6, linewidths=1)
 
-        tern_plot.show()
+        ternary_fname = os.path.join(self.save_folder, 'ternary_plots', self.sample_name)
+        plt.savefig(ternary_fname + '.png', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.savefig(ternary_fname + '.eps', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
