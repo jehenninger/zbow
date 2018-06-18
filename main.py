@@ -1,10 +1,8 @@
 import sys
-import os
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 from window import Ui_MainWindow
 import model
 import view
-import pandas as pd
 
 
 class scatterWindow(QtWidgets.QMainWindow):
@@ -184,6 +182,9 @@ class Main(Ui_MainWindow):
                                                         self.data.sample_name + '_metadata.csv'),
                                index=True, header=False)
 
+        self.data.make_output_plots(scale=self.ternScaleOption.currentIndex(),
+                                    color=self.ternColorOption.currentIndex())
+
     def restore_data(self):
         # reinitialize auto_cluster data
         self.data.tab_cluster_data = pd.Series
@@ -214,7 +215,6 @@ class Main(Ui_MainWindow):
         self.data.zbow_2d_plot(self.tern2DWindow,
                                scale=self.ternScaleOption.currentIndex(),
                                color=self.ternColorOption.currentIndex())
-
 
         # print successful load and display number of cells
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
@@ -422,8 +422,6 @@ if __name__ == "__main__":
     prog = Main(dialog)
     prog.screen_size = [size.width(), size.height()]
 
-    app.aboutToQuit.connect(prog.save_pref)
-
     # write/read preferences file
     pref_file_exists = os.path.isfile('bin/pref.csv')
 
@@ -512,5 +510,6 @@ if __name__ == "__main__":
 
         pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)
 
+    app.aboutToQuit.connect(prog.save_pref)
     dialog.show()
     sys.exit(app.exec_())

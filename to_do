@@ -8,8 +8,6 @@ make icon something zebrabow-y!
 
 add cluster plot and bar plot (upon saving)
 
-add in ability to load prior clustering solution
-
 add wait dialogs to everything
 
 save backgate plots
@@ -17,3 +15,6 @@ save backgate plots
 write the update_parameters function
 
 Handle all situations when nothing is selected!
+
+When the support is there, I would like to export the 3D Vispy graph as an interactive 3D graph that could be
+manipulated in powerpoint.

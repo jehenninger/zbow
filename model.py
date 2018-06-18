@@ -64,7 +64,6 @@ class SessionData:
         #self.file_name ='/Users/jon/Desktop/WKM_fish_023_023_cfp+yfp+ or rfp+_myeloid.fcs'  # @DEBUG temporary to speed up debugging
 
         self.path_name = os.path.dirname(os.path.abspath(self.file_name))
-        self.sample_name = os.path.basename(self.file_name)
         _, file_extension = os.path.splitext(self.file_name)
 
         if file_extension == '.fcs':
@@ -72,6 +71,9 @@ class SessionData:
             meta, self.raw = fcsparser.parse(self.file_name, meta_data_only=False, reformat_meta=True)
             self.params = meta['_channel_names_']
             self.data_size = self.raw.__len__()
+
+            self.sample_name = os.path.splitext(os.path.basename(self.file_name))[0]
+
         elif file_extension == '.csv':
             data = pd.read_csv(self.file_name, index_col=False, header=0)
 
@@ -85,6 +87,9 @@ class SessionData:
 
             self.data_size = self.raw.__len__()
             self.params = self.raw.columns.values.tolist()
+
+            self.sample_name = os.path.splitext(os.path.basename(self.file_name))[0]
+            self.sample_name = self.sample_name.replace('_cluster_solution', '')
 
             self.use_previous_clustering_solution = True
 
@@ -164,7 +169,6 @@ class SessionData:
 
     def ternary_transform(self, rgb_data):
         import math
-        from ternary import helpers
 
         # old way before I found library. Still bugs with the old method
         total = rgb_data.sum(axis='columns')
@@ -596,4 +600,76 @@ class SessionData:
         if not update:
             parent.move(new_window_position.x(), new_window_position.y())
             parent.show()
+
+    def make_output_plots(self, scale, color):
+        import ternary
+        from matplotlib import pyplot as plt
+        import helper
+        from scipy import stats as sd
+
+        # get scale data: scale_list = ['custom', 'default', 'linear']
+        if scale == 0:
+            scale_data = self.custom_transformed.as_matrix()
+        elif scale == 1:
+            scale_data = self.default_transformed.as_matrix()
+        elif scale == 2:
+            scale_data = self.linear_transformed.as_matrix()
+
+        if scale == 0:
+            contour_data = self.custom_ternary.as_matrix()
+        elif scale == 1:
+            contour_data = self.default_ternary.as_matrix()
+        elif scale == 2:
+            contour_data = self.linear_ternary.as_matrix()
+
+        # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
+        if color == 0:
+            color_data = self.custom_transformed.as_matrix()
+        elif color == 1:
+            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+        elif color == 2:
+            if self.tab_cluster_data.empty:
+                color_data = helper.distinguishable_colors(1)
+            else:
+                pseudo_color = helper.distinguishable_colors(self.tab_cluster_data['id'].count())
+                pseudo_color[self.noise_cluster_idx] = "#646464"
+
+                color_data = [None] * scale_data.shape[0]
+                for i in range(0, scale_data.shape[0]):
+                    color_data[i] = pseudo_color[self.cluster_data_idx[i]]
+        elif color == 3:
+            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+
+        # this assures that R + G + B = scale, which is required for the ternary library
+        total = scale_data.sum(axis=1)
+        scale_data = scale_data/total[:, None]
+
+        # get Gaussian kernel for contour plot
+        xmin = 0
+        xmax = 1
+        ymin = 0
+        ymax = 1
+
+        X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
+        positions = np.vstack([X.ravel(), Y.ravel()])
+        values = np.vstack([contour_data[:, 0], contour_data[:, 1]])
+        kernel = sd.gaussian_kde(values)
+        Z = np.reshape(kernel(positions).T, X.shape)
+
+        # new way with library
+        scale = 1
+        figure, tern_plot = ternary.figure(scale=scale)
+        figure.set_size_inches(5, 5)
+        figure.set_dpi(300)
+        tern_plot.set_title("ternary plot", fontsize=18)
+        tern_plot.boundary(linewidth=1.0)
+        tern_plot.gridlines(multiple=0.1, color='grey')
+
+        tern_plot.scatter(scale_data, marker='o', color=color_data, s=4)
+
+        tern_plot.clear_matplotlib_ticks()
+
+        plt.contour(X, Y, Z, colors='k', alpha=0.6)
+
+        tern_plot.show()
 
