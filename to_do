@@ -14,11 +14,6 @@ add wait dialogs to everything
 
 save backgate plots
 
-have preference file to change/save sample size and other user-changeable things?
-
 write the update_parameters function
-
-
-When loading the program, check for this metadata file and put in the correct parameters.
 
 Handle all situations when nothing is selected!

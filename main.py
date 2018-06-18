@@ -40,10 +40,6 @@ class Main(Ui_MainWindow):
         self.clusterOnData.insertItems(0, cluster_data_list)
         self.clusterOnData.setCurrentIndex(0)
 
-        cluster_method_list = ['fast peak', 'kmeans', 'blah blah']
-        self.clusterMethod.insertItems(0, cluster_method_list)
-        self.clusterMethod.setCurrentIndex(0)
-
         color_list = ['custom', 'default', 'cluster color', 'linear']
         self.scatterColorOption.insertItems(0, color_list)
         self.scatterColorOption.setCurrentIndex(0)
@@ -179,7 +175,8 @@ class Main(Ui_MainWindow):
                            'original_sample_size': self.data.data_size,
                            'sample_size': cluster_solution.shape[0],
                            'HDBSCAN_min_cluster_size': self.clusterMinClusterSize.text(),
-                           'HDBSCAN_min_samples': self.clusterMinSamples.text()
+                           'HDBSCAN_min_samples': self.clusterMinSamples.text(),
+                           'noise_cluster_idx': self.data.noise_cluster_idx
                            }
 
         metadata_output = pd.DataFrame.from_dict(metadata_output, orient='index')
@@ -394,9 +391,15 @@ class Main(Ui_MainWindow):
     #         event.ignore()
 
     def save_pref(self):
-        new_pref = {'sample_size': self.clusterSampleSize.text(),
-                    'HDBSCAN_min_cluster_size': self.clusterMinClusterSize.text(),
-                    'HDBSCAN_min_samples': self.clusterMinSamples.text()}
+        new_pref = {'sample_size': str(self.clusterSampleSize.text()),
+                    'HDBSCAN_min_cluster_size': str(self.clusterMinClusterSize.text()),
+                    'HDBSCAN_min_samples': str(self.clusterMinSamples.text()),
+                    'cluster_data_list': str(self.clusterOnData.currentText()),
+                    'scatter_color_list': str(self.scatterColorOption.currentText()),
+                    'scatter_scale_list': str(self.scatterScaleOption.currentText()),
+                    'tern_color_list': str(self.ternColorOption.currentText()),
+                    'tern_scale_list': str(self.ternScaleOption.currentText())
+                    }
 
         new_pref_output = pd.DataFrame.from_dict(new_pref, orient='index')
 
@@ -422,9 +425,9 @@ if __name__ == "__main__":
     app.aboutToQuit.connect(prog.save_pref)
 
     # write/read preferences file
-    check_file = os.path.isfile('bin/pref.csv')
+    pref_file_exists = os.path.isfile('bin/pref.csv')
 
-    if check_file:
+    if pref_file_exists:
         pref = pd.read_csv('bin/pref.csv', index_col=0, header=None)
 
         cluster_sample_size = pref.loc['sample_size']
@@ -436,6 +439,60 @@ if __name__ == "__main__":
         cluster_min_samples = pref.loc['HDBSCAN_min_samples']
         cluster_min_samples = cluster_min_samples.iloc[0]
 
+        cluster_data_list = str(pref.loc['cluster_data_list'][1])
+        if cluster_data_list == 'custom ternary':
+            prog.clusterOnData.setCurrentIndex(0)
+        elif cluster_data_list == 'custom rgb':
+            prog.clusterOnData.setCurrentIndex(1)
+        elif cluster_data_list == 'default ternary':
+            prog.clusterOnData.setCurrentIndex(2)
+        elif cluster_data_list == 'default rgb':
+            prog.clusterOnData.setCurrentIndex(3)
+        elif cluster_data_list == 'linear ternary':
+            prog.clusterOnData.setCurrentIndex(4)
+        elif cluster_data_list == 'linear rgb':
+            prog.clusterOnData.setCurrentIndex(5)
+
+        tern_color_list = str(pref.loc['tern_color_list'][1])
+        if tern_color_list == 'custom':
+            prog.ternColorOption.setCurrentIndex(0)
+        elif tern_color_list == 'default':
+            prog.ternColorOption.setCurrentIndex(1)
+        elif tern_color_list == 'cluster color':
+            prog.ternColorOption.setCurrentIndex(2)
+        elif tern_color_list == 'linear':
+            prog.ternColorOption.setCurrentIndex(3)
+
+        tern_scale_list = str(pref.loc['tern_scale_list'][1])
+        if tern_scale_list == 'custom':
+                prog.ternScaleOption.setCurrentIndex(0)
+        elif tern_scale_list == 'default':
+                prog.ternScaleOption.setCurrentIndex(1)
+        elif tern_scale_list == 'cluster color':
+                prog.ternScaleOption.setCurrentIndex(2)
+        elif tern_scale_list == 'linear':
+                prog.ternScaleOption.setCurrentIndex(3)
+
+        scatter_color_list = str(pref.loc['scatter_color_list'][1])
+        if scatter_color_list == 'custom':
+            prog.scatterColorOption.setCurrentIndex(0)
+        elif scatter_color_list == 'default':
+            prog.scatterColorOption.setCurrentIndex(1)
+        elif scatter_color_list == 'cluster color':
+            prog.scatterColorOption.setCurrentIndex(2)
+        elif scatter_color_list == 'linear':
+            prog.scatterColorOption.setCurrentIndex(3)
+
+        scatter_scale_list = str(pref.loc['scatter_scale_list'][1])
+        if scatter_scale_list == 'custom':
+            prog.scatterScaleOption.setCurrentIndex(0)
+        elif scatter_scale_list == 'default':
+            prog.scatterScaleOption.setCurrentIndex(1)
+        elif scatter_scale_list == 'cluster color':
+            prog.scatterScaleOption.setCurrentIndex(2)
+        elif scatter_scale_list == 'linear':
+            prog.scatterScaleOption.setCurrentIndex(3)
+
         prog.clusterSampleSize.setText(str(cluster_sample_size))
         prog.clusterMinClusterSize.setText(str(cluster_min_cluster_size))
         prog.clusterMinSamples.setText(str(cluster_min_samples))
@@ -443,7 +500,14 @@ if __name__ == "__main__":
     else:
         pref = {'sample_size': '20000',
                 'HDBSCAN_min_cluster_size': '25',
-                'HDBSCAN_min_samples': '1'}
+                'HDBSCAN_min_samples': '1',
+                'cluster_data_list': 'custom ternary',
+                'scatter_color_list': 'custom',
+                'scatter_scale_list': 'default',
+                'tern_color_list': 'custom',
+                'tern_scale_list': 'custom'
+                }
+
         pref_output = pd.DataFrame.from_dict(pref, orient='index')
 
         pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)

@@ -38,6 +38,7 @@ class SessionData:
         self.cluster_eval = []
         self.outlier_scores = []
         self.outliers_removed = bool
+        self.use_previous_clustering_solution = bool
 
         self.h_canvas_3d = None
         self.h_view_3d = None
@@ -64,11 +65,31 @@ class SessionData:
 
         self.path_name = os.path.dirname(os.path.abspath(self.file_name))
         self.sample_name = os.path.basename(self.file_name)
+        _, file_extension = os.path.splitext(self.file_name)
 
-        # read in the data
-        meta, self.raw = fcsparser.parse(self.file_name, meta_data_only=False, reformat_meta=True)
-        self.params = meta['_channel_names_']
-        self.data_size = self.raw.__len__()
+        if file_extension == '.fcs':
+            # read in the data
+            meta, self.raw = fcsparser.parse(self.file_name, meta_data_only=False, reformat_meta=True)
+            self.params = meta['_channel_names_']
+            self.data_size = self.raw.__len__()
+        elif file_extension == '.csv':
+            data = pd.read_csv(self.file_name, index_col=False, header=0)
+
+            self.raw = data.drop('clusterID', axis=1)
+            self.cluster_data_idx = data['clusterID']
+
+            metadata_file_name = self.file_name.replace('cluster_solution', 'metadata')
+
+            metadata = pd.read_csv(metadata_file_name, index_col=0, header=None)
+            self.noise_cluster_idx = int(metadata.loc['noise_cluster_idx'][1])
+
+            self.data_size = self.raw.__len__()
+            self.params = self.raw.columns.values.tolist()
+
+            self.use_previous_clustering_solution = True
+
+        else:
+            print('Cannot load file. Please make sure it is .fcs or .csv') #TODO change this to dialog warning
 
         # take random sample if user wants a smaller sample size
 
@@ -239,29 +260,32 @@ class SessionData:
         # evaluate clustering solution
         self.cluster_eval = metrics.silhouette_samples(data.as_matrix(), self.cluster_data_idx)
 
-    def auto_cluster(self, cluster_on_data, min_cluster_size=25, min_samples=1, evaluate_cluster=False):
+    def auto_cluster(self, cluster_on_data, min_cluster_size=25, min_samples=1, evaluate_cluster=False, prev_clustering_solution=False):
         # from sklearn.cluster import DBSCAN
         import hdbscan
 
-        data = self.get_data_to_cluster_on(cluster_on_data)
-        # auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
-        auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples).fit(data.as_matrix())
-        auto_cluster_data = auto_cluster_method.labels_
-        self.outlier_scores = auto_cluster_method.outlier_scores_
+        if prev_clustering_solution:
+            self.auto_cluster_idx = self.cluster_data_idx
+        else:
+            data = self.get_data_to_cluster_on(cluster_on_data)
+            # auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
+            auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples).fit(data.as_matrix())
+            auto_cluster_data = auto_cluster_method.labels_
+            self.outlier_scores = auto_cluster_method.outlier_scores_
 
-        max_cluster = max(auto_cluster_data)
+            max_cluster = max(auto_cluster_data)
 
-        # DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for
-        #  the time being. Remember that we also change the 'id' to 'noise' in the cluster
-        #  table using this index as well
+            # DBSCAN returns -1 for 'halo' cells that don't belong in clusters. We will make them their own cluster for
+            #  the time being. Remember that we also change the 'id' to 'noise' in the cluster
+            #  table using this index as well
 
-        for k in range(0, len(auto_cluster_data)):
-            if auto_cluster_data[k] == -1:
-                auto_cluster_data[k] = max_cluster + 1
+            for k in range(0, len(auto_cluster_data)):
+                if auto_cluster_data[k] == -1:
+                    auto_cluster_data[k] = max_cluster + 1
 
-        self.noise_cluster_idx = max_cluster + 1
-        self.auto_cluster_idx = auto_cluster_data
-        self.cluster_data_idx = auto_cluster_data
+            self.noise_cluster_idx = max_cluster + 1
+            self.auto_cluster_idx = auto_cluster_data
+            self.cluster_data_idx = auto_cluster_data
 
         if evaluate_cluster:
             self.evaluate_cluster_solution(data)
