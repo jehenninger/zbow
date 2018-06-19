@@ -577,23 +577,6 @@ class SessionData:
                                    edge_width=0,
                                    face_color=cell_color)
 
-        # make contour plot (this doesn't work currently. May just do it in export with matplotlib functionality).
-        # kernel = st.gaussian_kde(scale_data.transpose())
-        #
-        #
-        # xmin, xmax = 0, 1
-        # ymin, ymax = 0, 1
-        #
-        # xx, yy = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
-        # positions = np.vstack([xx.ravel(), yy.ravel()])
-        #
-        #
-        # f = np.reshape(kernel(positions).T, xx.shape)
-        #
-        # mesh = scene.visuals.GridMesh(xx, yy, f)
-        #self.h_view_2d.add(mesh)
-
-
         # if not update:
         #     self.h_scatter_2d.symbol = visuals.marker_types[10]
 
@@ -644,34 +627,164 @@ class SessionData:
         total = scale_data.sum(axis=1)
         scale_data = scale_data/total[:, None]
 
-        # get Gaussian kernel for contour plot
-        xmin = 0
-        xmax = 1
-        ymin = 0
-        ymax = 1
+        tern_true = True
 
-        X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
-        positions = np.vstack([X.ravel(), Y.ravel()])
-        values = np.vstack([contour_data[:, 0], contour_data[:, 1]])
-        kernel = sd.gaussian_kde(values)
-        Z = np.reshape(kernel(positions).T, X.shape)
+        if tern_true:
+            ###### TERNARY PLOT WITH CONTOUR ######
+            # get Gaussian kernel for contour plot
+            xmin = 0
+            xmax = 1
+            ymin = 0
+            ymax = 1
 
-        # new way with library
-        scale = 1
-        figure, tern_plot = ternary.figure(scale=scale)
-        figure.set_size_inches(5.37, 5)
-        figure.set_dpi(300)
-        # tern_plot.set_title("ternary plot", fontsize=18)
-        tern_plot.boundary(linewidth=1.0)
-        tern_plot.gridlines(multiple=0.1, color='grey')
+            X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
+            positions = np.vstack([X.ravel(), Y.ravel()])
+            values = np.vstack([contour_data[:, 0], contour_data[:, 1]])
+            kernel = sd.gaussian_kde(values)
+            Z = np.reshape(kernel(positions).T, X.shape)
 
-        tern_plot.scatter(scale_data, marker='o', color=color_data, s=2)
+            # new way with library
+            scale = 1
+            tern_figure, tern_plot = ternary.figure(scale=scale)
+            tern_figure.set_size_inches(5.37, 5)  # this is proper scaling to approximate an equilateral triangle
+            tern_figure.set_dpi(300)
+            # tern_plot.set_title("ternary plot", fontsize=18)
+            tern_plot.boundary(linewidth=1.0)
+            tern_plot.gridlines(multiple=0.1, color='grey')
 
-        tern_plot.clear_matplotlib_ticks()
+            tern_plot.scatter(scale_data, marker='o', color=color_data, s=2)
 
-        plt.contour(X, Y, Z, colors='k', alpha=0.6, linewidths=1)
+            tern_plot.clear_matplotlib_ticks()
 
-        ternary_fname = os.path.join(self.save_folder, 'ternary_plots', self.sample_name)
-        plt.savefig(ternary_fname + '.png', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
-        plt.savefig(ternary_fname + '.eps', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+            plt.contour(X, Y, Z, colors='k', alpha=0.6, linewidths=1)
 
+            ternary_filename = os.path.join(self.save_folder, 'ternary_plots', self.sample_name)
+            plt.savefig(ternary_filename + '.png', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+            plt.savefig(ternary_filename + '.eps', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+
+            plt.close(tern_figure)
+
+        ######### BAR GRAPH #########
+
+        bar_true = True
+
+        if bar_true:
+            bar_data = self.tab_cluster_data['percentage']
+            bar_color = self.tab_cluster_data[['mean R', 'mean G', 'mean B']]
+
+            bar_figure, bar_ax = plt.subplots()
+            bar_figure.set_size_inches(3, 6)
+            bar_figure.set_dpi(300)
+
+            for j in range(0, len(bar_data)):
+                if j == 0:
+                    b_col = bar_color.iloc[j].values.tolist()
+                    b_col.append(1)
+                    bar_ax.bar(0, bar_data.iloc[j], color=b_col)
+
+                    total = bar_data.iloc[j]
+                else:
+                    b_col = bar_color.iloc[j].values.tolist()
+
+                    if j == self.noise_cluster_idx:
+                        b_col.append(0)  # set noise cluster to total transparency
+                    else:
+                        b_col.append(1)
+
+                    bar_ax.bar(0, bar_data.iloc[j], bottom=total, color=b_col)
+                    total = total + bar_data.iloc[j]
+
+            plt.ylim(0, 100)
+            plt.xticks([])
+
+            bar_filename = os.path.join(self.save_folder, 'bar_graphs', self.sample_name)
+
+            plt.savefig(bar_filename + 'bar_graph.png',
+                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+
+            plt.savefig(bar_filename + 'bar_graph.eps',
+                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+
+            plt.close(bar_figure)
+
+
+        ######### BACKGATE PLOTS #####
+
+        backgate_true = True
+
+        if backgate_true:
+            for i in set(self.cluster_data_idx):
+                meanG = np.mean(self.default_transformed.loc[self.cluster_data_idx == i, 'YFP'])
+                meanB = np.mean(self.default_transformed.loc[self.cluster_data_idx == i, 'CFP'])
+
+                if meanG < 0.5 < meanB:
+                    quadrant = 1
+                elif meanB > 0.5 and meanG > 0.5:
+                    quadrant = 2
+                elif meanB < 0.5 and meanG < 0.5:
+                    quadrant = 3
+                elif meanB < 0.5 < meanG:
+                    quadrant = 4
+
+                self.make_backgate_plot(i, quadrant)
+
+    def make_backgate_plot(self, cluster_id, quadrant):
+        from matplotlib import pyplot as plt
+
+        color_data = np.empty([self.custom_transformed.shape[0], self.custom_transformed.shape[1]])
+        color_data[:] = 0.8  # grey for non-highlighted cells
+
+        highlight_cells = self.cluster_data_idx == cluster_id
+        highlight_cells = pd.Series(highlight_cells, name='bools')
+
+        color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values].as_matrix()
+
+        backgate_figure, (backgate_ax1, backgate_ax2) = plt.subplots(1, 2, sharey='all')
+        backgate_figure.set_size_inches(7.5, 3.75)
+        backgate_figure.set_dpi(300)
+
+        backgate_ax1.set(xlabel='YFP', ylabel='CFP')
+        backgate_ax2.set(xlabel='YFP', ylabel='RFP')
+
+        backgate_ax1.set_xlim(0, 1)
+        backgate_ax1.set_ylim(0, 1)
+        backgate_ax2.set_xlim(0, 1)
+        backgate_ax2.set_ylim(0, 1)
+
+        backgate_ax1.set_xticklabels([])
+        backgate_ax1.set_yticklabels([])
+        backgate_ax2.set_xticklabels([])
+        backgate_ax2.set_yticklabels([])
+
+        backgate_ax1.scatter(self.default_transformed['YFP'], self.default_transformed['CFP'],
+                             s=2, c=color_data)
+
+        if quadrant is 1:
+            quad_data = self.default_transformed[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] > 0.5)]
+            quad_color = color_data[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] > 0.5)]
+        elif quadrant is 2:
+            quad_data = self.default_transformed[
+                (self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] > 0.5)]
+            quad_color = color_data[(self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] > 0.5)]
+        elif quadrant is 3:
+            quad_data = self.default_transformed[
+                (self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] < 0.5)]
+            quad_color = color_data[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] < 0.5)]
+        elif quadrant is 4:
+            quad_data = self.default_transformed[
+                (self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
+            quad_color = color_data[(self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
+
+        backgate_ax2.scatter(quad_data['YFP'], quad_data['RFP'],
+                             s=2, c=quad_color)
+
+        backgate_filename = os.path.join(self.save_folder, 'cluster_backgates', self.sample_name)
+
+        if cluster_id == self.noise_cluster_idx:
+            plt.savefig(backgate_filename + '_cluster_noise' + '.png',
+                        dpi=150, transparent=False, pad_inches=0, Bbox='tight')
+        else:
+            plt.savefig(backgate_filename + '_cluster_' + str(cluster_id) + '.png',
+                        dpi=150, transparent=False, pad_inches=0, Bbox='tight')
+
+        plt.close(backgate_figure)

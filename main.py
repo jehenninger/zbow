@@ -1,5 +1,6 @@
 import sys
 from PyQt5 import QtWidgets
+from PyQt5 import QtGui
 from window import Ui_MainWindow
 import model
 import view
@@ -142,64 +143,71 @@ class Main(Ui_MainWindow):
 
     def save_data(self):
         from datetime import datetime
-        # get directory to save to
-        self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
-                                                                           directory=os.path.dirname(self.data.file_name))
 
-        # make subdirectories if they don't exist
+        save_true = True
 
-        if not os.path.isdir(os.path.join(self.data.save_folder, 'ternary_plots')):
-            os.makedirs(os.path.join(self.data.save_folder, 'ternary_plots'))
+        if save_true:
+            # get directory to save to
+            self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
+                                                                               directory=os.path.dirname(self.data.file_name))
 
-        if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_backgates')):
-            os.makedirs(os.path.join(self.data.save_folder, 'cluster_backgates'))
+            # make subdirectories if they don't exist
 
-        if not os.path.isdir(os.path.join(self.data.save_folder, 'bar_graphs')):
-            os.makedirs(os.path.join(self.data.save_folder, 'bar_graphs'))
+            if not os.path.isdir(os.path.join(self.data.save_folder, 'ternary_plots')):
+                os.makedirs(os.path.join(self.data.save_folder, 'ternary_plots'))
 
-        if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_solutions')):
-            os.makedirs(os.path.join(self.data.save_folder, 'cluster_solutions'))
+            if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_backgates')):
+                os.makedirs(os.path.join(self.data.save_folder, 'cluster_backgates'))
 
-        if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_summaries')):
-            os.makedirs(os.path.join(self.data.save_folder, 'cluster_summaries'))
+            if not os.path.isdir(os.path.join(self.data.save_folder, 'bar_graphs')):
+                os.makedirs(os.path.join(self.data.save_folder, 'bar_graphs'))
 
-        # self.data.tab_cluster_data.to_pickle(path=os.path.join(self.data.save_folder,
-        #                                                        self.data.sample_name + '_Summary.pkl'),
-        #                                      compression=None)
-        self.data.tab_cluster_data.to_csv(os.path.join(self.data.save_folder, 'cluster_summaries',
-                                                       self.data.sample_name + '_Summary.csv'),
-                                          index=False, header=True)
+            if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_solutions')):
+                os.makedirs(os.path.join(self.data.save_folder, 'cluster_solutions'))
 
-        if self.data.outliers_removed:
-            cluster_solution = self.data.raw_filtered
-            cluster_solution.insert(0, 'clusterID', self.data.cluster_data_idx)
-        else:
-            cluster_solution = self.data.raw
-            cluster_solution.insert(loc=0, column='clusterID', value=pd.Series(self.data.cluster_data_idx))
+            if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_summaries')):
+                os.makedirs(os.path.join(self.data.save_folder, 'cluster_summaries'))
 
-        # cluster_solution.to_pickle(path=os.path.join(self.data.save_folder,
-        #                                              self.data.sample_name + '_cluster_solution.pkl'),
-        #                            compression=None)
+            # self.data.tab_cluster_data.to_pickle(path=os.path.join(self.data.save_folder,
+            #                                                        self.data.sample_name + '_Summary.pkl'),
+            #                                      compression=None)
+            self.data.tab_cluster_data.to_csv(os.path.join(self.data.save_folder, 'cluster_summaries',
+                                                           self.data.sample_name + '_Summary.csv'),
+                                              index=False, header=True)
 
-        cluster_solution.to_csv(path_or_buf=os.path.join(self.data.save_folder, 'cluster_solutions',
-                                                         self.data.sample_name + '_cluster_solution.csv'),
-                                index=False, header=True)
+            if self.data.outliers_removed:
+                cluster_solution = self.data.raw_filtered
+                cluster_solution.insert(0, 'clusterID', self.data.cluster_data_idx)
+            else:
+                cluster_solution = self.data.raw
+                cluster_solution.insert(loc=0, column='clusterID', value=pd.Series(self.data.cluster_data_idx))
 
-        metadata_output = {'fcs_file': self.data.file_name,
-                           'date_and_time': datetime.now(),
-                           'original_sample_size': self.data.data_size,
-                           'sample_size': cluster_solution.shape[0],
-                           'HDBSCAN_min_cluster_size': self.clusterMinClusterSize.text(),
-                           'HDBSCAN_min_samples': self.clusterMinSamples.text(),
-                           'noise_cluster_idx': self.data.noise_cluster_idx
-                           }
+            # cluster_solution.to_pickle(path=os.path.join(self.data.save_folder,
+            #                                              self.data.sample_name + '_cluster_solution.pkl'),
+            #                            compression=None)
 
-        metadata_output = pd.DataFrame.from_dict(metadata_output, orient='index')
-        metadata_output.to_csv(path_or_buf=os.path.join(self.data.save_folder, 'cluster_solutions',
-                                                        self.data.sample_name + '_metadata.csv'),
-                               index=True, header=False)
+            cluster_solution.to_csv(path_or_buf=os.path.join(self.data.save_folder, 'cluster_solutions',
+                                                             self.data.sample_name + '_cluster_solution.csv'),
+                                    index=False, header=True)
 
-        self.data.make_output_plots(scale=self.ternScaleOption.currentIndex(),
+            metadata_output = {'fcs_file': self.data.file_name,
+                               'date_and_time': datetime.now(),
+                               'original_sample_size': self.data.data_size,
+                               'sample_size': cluster_solution.shape[0],
+                               'HDBSCAN_min_cluster_size': self.clusterMinClusterSize.text(),
+                               'HDBSCAN_min_samples': self.clusterMinSamples.text(),
+                               'noise_cluster_idx': self.data.noise_cluster_idx
+                               }
+
+            metadata_output = pd.DataFrame.from_dict(metadata_output, orient='index')
+            metadata_output.to_csv(path_or_buf=os.path.join(self.data.save_folder, 'cluster_solutions',
+                                                            self.data.sample_name + '_metadata.csv'),
+                                   index=True, header=False)
+
+        make_graph_output = True
+
+        if make_graph_output:
+            self.data.make_output_plots(scale=self.ternScaleOption.currentIndex(),
                                     color=self.ternColorOption.currentIndex())
 
     def restore_data(self):
@@ -428,6 +436,7 @@ if __name__ == "__main__":
     import pandas as pd
 
     app = QtWidgets.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon('bin/logo.png'))
 
     screen = app.primaryScreen()
     size = screen.size()
