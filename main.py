@@ -10,6 +10,15 @@ import helper
 class ScatterWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(ScatterWindow, self).__init__()
+        self.was_closed = False
+
+    def closeEvent(self, event):
+        self.was_closed = True
+
+
+class ErrorDialog(QtWidgets.QMessageBox):
+    def __init__(self):
+        super(ErrorDialog, self).__init__()
 
 
 class Main(Ui_MainWindow):
@@ -29,6 +38,7 @@ class Main(Ui_MainWindow):
         self.data = model.SessionData()
         self.scatter3DWindow = ScatterWindow()
         self.tern2DWindow = ScatterWindow()
+        self.error_dialog = ErrorDialog()
 
         # initialize fields and defaults
         self.clusterSampleSize.setText("10000")
@@ -97,8 +107,6 @@ class Main(Ui_MainWindow):
         self.ternScaleOption.activated.connect(self.update_plots)
 
     def load_data(self):
-        # @TODO Add loading timer dialog box
-        # @TODO Add shortcut for menu items, like loading data
         import pandas as pd
 
         view.start_progress_bar(self.progressBar, start=0, stop=4)
@@ -113,43 +121,46 @@ class Main(Ui_MainWindow):
         # load fcs file
         sample_size = self.clusterSampleSize.text()
         sample_size = int(sample_size)
-        self.data.fcs_read(sample_size)
+        successful_load = self.data.fcs_read(sample_size)
 
-        # fill parameter table
-        self.data.param_combo_box_list = view.init_param_table(self.parameterTable, self.data.params)
+        if successful_load:
+            # fill parameter table
+            self.data.param_combo_box_list = view.init_param_table(self.parameterTable, self.data.params)
 
-        view.update_progress_bar(self.progressBar)
-        QtWidgets.QApplication.processEvents()
-        # transform data
-        self.data.transform_data()
+            view.update_progress_bar(self.progressBar)
+            QtWidgets.QApplication.processEvents()
+            # transform data
+            self.data.transform_data()
 
-        # print successful load and display number of cells
-        self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
-                               self.data.raw.shape[0].__str__() + ' sampled cells)')
+            # print successful load and display number of cells
+            self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
+                                   self.data.raw.shape[0].__str__() + ' sampled cells)')
 
-        view.update_progress_bar(self.progressBar)
-        QtWidgets.QApplication.processEvents()
-        # initialize 2D and 3D zbow graph
-        default_position = [0.5 * self.screen_size[0], 0.05 * self.screen_size[1]]
-        self.scatter3DWindow.move(default_position[0], default_position[1])
-        # @TODO set default size of the 2D and 3D graphs so that they don't overlap
-        self.data.zbow_3d_plot(self.scatter3DWindow,
-                               scale=self.scatterScaleOption.currentIndex(),
-                               color=self.scatterColorOption.currentIndex())
+            view.update_progress_bar(self.progressBar)
+            QtWidgets.QApplication.processEvents()
+            # initialize 2D and 3D zbow graph
+            default_position = [0.5 * self.screen_size[0], 0.05 * self.screen_size[1]]
+            self.scatter3DWindow.move(default_position[0], default_position[1])
+            # @TODO set default size of the 2D and 3D graphs so that they don't overlap
+            self.data.zbow_3d_plot(self.scatter3DWindow,
+                                   scale=self.scatterScaleOption.currentIndex(),
+                                   color=self.scatterColorOption.currentIndex())
 
-        default_position = [0.5 * self.screen_size[0], 0.5 * self.screen_size[1]]
-        self.tern2DWindow.move(default_position[0], default_position[1])
-        self.data.zbow_2d_plot(self.tern2DWindow,
-                               scale=self.ternScaleOption.currentIndex(),
-                               color=self.ternColorOption.currentIndex())
+            default_position = [0.5 * self.screen_size[0], 0.5 * self.screen_size[1]]
+            self.tern2DWindow.move(default_position[0], default_position[1])
+            self.data.zbow_2d_plot(self.tern2DWindow,
+                                   scale=self.ternScaleOption.currentIndex(),
+                                   color=self.ternColorOption.currentIndex())
 
-        view.update_progress_bar(self.progressBar)
-        QtWidgets.QApplication.processEvents()
-        self.cluster_data()
+            view.update_progress_bar(self.progressBar)
+            QtWidgets.QApplication.processEvents()
+            self.cluster_data()
 
-        view.update_progress_bar(self.progressBar)
-        QtWidgets.QApplication.processEvents()
-        self.data.outliers_removed = False
+            view.update_progress_bar(self.progressBar)
+            QtWidgets.QApplication.processEvents()
+            self.data.outliers_removed = False
+        else:
+            helper.error_message(self.error_dialog, 'Could not load .fcs or .csv file')
 
     def update_params(self):
         print('not done yet')
@@ -161,15 +172,14 @@ class Main(Ui_MainWindow):
         from datetime import datetime
 
         num_of_progress_bar_steps = 4 + len(self.data.tab_cluster_data['id'])
-        save_true = True
 
-        if save_true:
-            view.start_progress_bar(self.progressBar, start=0, stop=num_of_progress_bar_steps)
+        view.start_progress_bar(self.progressBar, start=0, stop=num_of_progress_bar_steps)
 
-            # get directory to save to
-            self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
-                                                                               directory=os.path.dirname(self.data.file_name))
+        # get directory to save to
+        self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
+                                                                           directory=os.path.dirname(self.data.file_name))
 
+        if self.data.save_folder:
             # make subdirectories if they don't exist
 
             if not os.path.isdir(os.path.join(self.data.save_folder, 'ternary_plots')):
@@ -231,12 +241,11 @@ class Main(Ui_MainWindow):
             view.update_progress_bar(self.progressBar)
             QtWidgets.QApplication.processEvents()
 
-        make_graph_output = True
-
-        if make_graph_output:
             self.data.make_output_plots(scale=self.ternScaleOption.currentIndex(),
                                         color=self.ternColorOption.currentIndex(),
                                         progress_bar=self.progressBar)
+        else:
+            helper.error_message(self.error_dialog, 'Could not retrieve directory to save to')
 
     def restore_data(self):
         # reinitialize auto_cluster data
@@ -336,58 +345,64 @@ class Main(Ui_MainWindow):
 
         table_object = self.clusterInformationTable.selectedItems()
         clusters_to_join = []
-        # TODO handle situations where nothing is selected!
-        for i in range(0, len(table_object)):
-            temp_table_object = table_object[i].text()
 
-            if 'noise' in str(temp_table_object):
-                print('Can not join noise cluster')  # TODO change this to a dialog message box
-                con = False
-                break
-            else:
-                if 'red only' in str(temp_table_object):
-                    temp_table_object = self.data.red_only_cluster_idx
-                clusters_to_join.append(temp_table_object)
-                clusters_to_join[i] = int(clusters_to_join[i])
-                con = True
+        if table_object:
+            for i in range(0, len(table_object)):
+                temp_table_object = table_object[i].text()
 
-        if con:
-            self.data.join_clusters_together(clusters_to_join, self.clusterOnData.currentIndex(),
-                                             evaluate_cluster=eval_cluster_bool)
-            self.giniCoeff.setText(str(self.data.gini))
-            self.shannonEntropy.setText(str(self.data.shannon))
+                if 'noise' in str(temp_table_object):
+                    helper.error_message(self.error_dialog, 'Can not join noise cluster')
+                    con = False
+                    break
+                else:
+                    if 'red only' in str(temp_table_object):
+                        temp_table_object = self.data.red_only_cluster_idx
+                    clusters_to_join.append(temp_table_object)
+                    clusters_to_join[i] = int(clusters_to_join[i])
+                    con = True
 
-            view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
-            self.update_plots()
+            if con:
+                self.data.join_clusters_together(clusters_to_join, self.clusterOnData.currentIndex(),
+                                                 evaluate_cluster=eval_cluster_bool)
+                self.giniCoeff.setText(str(self.data.gini))
+                self.shannonEntropy.setText(str(self.data.shannon))
+
+                view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
+                self.update_plots()
+        else:
+            helper.error_message(self.error_dialog, 'No clusters selected')
 
     def highlight_cluster(self):
         table_object = self.clusterInformationTable.selectedItems()
         clusters_to_highlight = []
 
-        for i in range(0, len(table_object)):
-            temp_table_object = table_object[i].text()
+        if table_object:
+            for i in range(0, len(table_object)):
+                temp_table_object = table_object[i].text()
 
-            if 'noise' in str(temp_table_object):
-                clusters_to_highlight.append(int(self.data.noise_cluster_idx))
-            elif 'red only' in str(temp_table_object):
-                clusters_to_highlight.append(int(self.data.red_only_cluster_idx))
-            else:
-                clusters_to_highlight.append(temp_table_object)
-                clusters_to_highlight[i] = int(clusters_to_highlight[i])
+                if 'noise' in str(temp_table_object):
+                    clusters_to_highlight.append(int(self.data.noise_cluster_idx))
+                elif 'red only' in str(temp_table_object):
+                    clusters_to_highlight.append(int(self.data.red_only_cluster_idx))
+                else:
+                    clusters_to_highlight.append(temp_table_object)
+                    clusters_to_highlight[i] = int(clusters_to_highlight[i])
 
-        highlight_cells = [x in clusters_to_highlight for x in self.data.cluster_data_idx]
+            highlight_cells = [x in clusters_to_highlight for x in self.data.cluster_data_idx]
 
-        self.data.zbow_3d_plot(self.scatter3DWindow,
-                               scale=self.scatterScaleOption.currentIndex(),
-                               color=4,
-                               update=True,
-                               highlight_cells=highlight_cells)
+            self.data.zbow_3d_plot(self.scatter3DWindow,
+                                   scale=self.scatterScaleOption.currentIndex(),
+                                   color=4,
+                                   update=True,
+                                   highlight_cells=highlight_cells)
 
-        self.data.zbow_2d_plot(self.tern2DWindow,
-                               scale=self.ternScaleOption.currentIndex(),
-                               color=4,
-                               update=True,
-                               highlight_cells=highlight_cells)
+            self.data.zbow_2d_plot(self.tern2DWindow,
+                                   scale=self.ternScaleOption.currentIndex(),
+                                   color=4,
+                                   update=True,
+                                   highlight_cells=highlight_cells)
+        else:
+            helper.error_message(self.error_dialog, 'No clusters selected')
 
     def highlight_cluster_in_table(self):
         current_cell = self.clusterInformationTable.selectedItems()
@@ -406,27 +421,30 @@ class Main(Ui_MainWindow):
         eval_cluster_bool = self.evaluateClusteringCheckBox.isChecked()
 
         cluster_to_split = self.clusterInformationTable.selectedItems()
-        if len(cluster_to_split) > 1:
-            print('Warning: This function can only split one cluster at a time and chose the first selected cluster')
-            #TODO change this to a dialog message box
+        if cluster_to_split:
+            if len(cluster_to_split) > 1:
+                helper.error_message(self.error_dialog,
+                                     'Warning: This function can only split one cluster at '
+                                     'a time and chose the first selected cluster')
 
-        cluster_to_split = cluster_to_split[0].text()
-        print('cluster to split \n', cluster_to_split)
+            cluster_to_split = cluster_to_split[0].text()
+            print('cluster to split \n', cluster_to_split)
 
-        if 'noise' in str(cluster_to_split):
-            print('Can not split noise cluster')  # TODO change this to a dialog message box
+            if 'noise' in str(cluster_to_split):
+                helper.error_message(self.error_dialog, 'Can not split noise cluster')
+            else:
+                if 'red only' in str(cluster_to_split):
+                    cluster_to_split = self.data.red_only_cluster_idx
+                cluster_to_split = int(cluster_to_split)
+                self.data.split_cluster_in_two(cluster_to_split, self.clusterOnData.currentIndex(),
+                                               evaluate_cluster=eval_cluster_bool)
+                self.giniCoeff.setText(str(self.data.gini))
+                self.shannonEntropy.setText(str(self.data.shannon))
 
+                view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
+                self.update_plots()
         else:
-            if 'red only' in str(cluster_to_split):
-                cluster_to_split = self.data.red_only_cluster_idx
-            cluster_to_split = int(cluster_to_split)
-            self.data.split_cluster_in_two(cluster_to_split, self.clusterOnData.currentIndex(),
-                                           evaluate_cluster=eval_cluster_bool)
-            self.giniCoeff.setText(str(self.data.gini))
-            self.shannonEntropy.setText(str(self.data.shannon))
-
-            view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
-            self.update_plots()
+            helper.error_message(self.error_dialog, 'No cluster selected')
 
     def evaluate_clusters(self):
         eval_cluster_bool = self.evaluateClusteringCheckBox.isChecked()
@@ -439,15 +457,16 @@ class Main(Ui_MainWindow):
             view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
 
     def update_plots(self):
-        self.data.zbow_3d_plot(self.scatter3DWindow,
-                               scale=self.scatterScaleOption.currentIndex(),
-                               color=self.scatterColorOption.currentIndex(),
-                               update=True)
+        if self.data.file_name:
+            self.data.zbow_3d_plot(self.scatter3DWindow,
+                                   scale=self.scatterScaleOption.currentIndex(),
+                                   color=self.scatterColorOption.currentIndex(),
+                                   update=True)
 
-        self.data.zbow_2d_plot(self.tern2DWindow,
-                               scale=self.ternScaleOption.currentIndex(),
-                               color=self.ternColorOption.currentIndex(),
-                               update=True)
+            self.data.zbow_2d_plot(self.tern2DWindow,
+                                   scale=self.ternScaleOption.currentIndex(),
+                                   color=self.ternColorOption.currentIndex(),
+                                   update=True)
 
     # def closeEvent(self, event):
     #

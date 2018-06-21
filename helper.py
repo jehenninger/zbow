@@ -194,6 +194,13 @@ def shannon_entropy(array):
     return output
 
 
+def error_message(handle, message):
+    handle.setText(message)
+    handle.exec()
+
+    QtWidgets.QApplication.processEvents()
+
+
 # def start_progress_bar(start, stop, main_label, sub_label=''):
 #     progress_dialog = ProgressDialog()
 #

@@ -79,6 +79,7 @@ class SessionData:
             self.data_size = self.raw.__len__()
 
             self.sample_name = os.path.splitext(os.path.basename(self.file_name))[0]
+            success = True
 
         elif file_extension == '.csv':
             data = pd.read_csv(self.file_name, index_col=False, header=0)
@@ -98,14 +99,16 @@ class SessionData:
             self.sample_name = self.sample_name.replace('_cluster_solution', '')
 
             self.use_previous_clustering_solution = True
-
+            success = True
         else:
-            print('Cannot load file. Please make sure it is .fcs or .csv') #TODO change this to dialog warning
+            success = False
 
-        # take random sample if user wants a smaller sample size
+        if success:
+            # take random sample if user wants a smaller sample size
+            if sample_size < self.data_size:
+                self.raw = self.raw.sample(sample_size, replace=False)
 
-        if sample_size < self.data_size:
-            self.raw = self.raw.sample(sample_size, replace=False)
+        return success
 
     def transform_data(self, outliers_removed=False):
         import logicle
@@ -155,12 +158,10 @@ class SessionData:
         current_column_names_linear[8] = 'CFP'
         self.linear_transformed.columns = current_column_names_linear
         self.linear_ternary = self.ternary_transform(self.linear_transformed[['RFP', 'YFP', 'CFP']])
-        print('Transform ended successfully \n')  # @DEBUG
 
     def parse_params(self):
         # this function will get the indices of the proper params from the GUI for transformation and
         # store them in a list
-        # @TODO should this be a dict with param names? I'm assuming that params will always be in the same order here
 
         # loop through combo boxes of first 12 parameters (we don't need time or events) and get the index of the param
         idx = []
@@ -377,7 +378,9 @@ class SessionData:
         from vispy import app, visuals, scene
         from vispy.color import Color, ColorArray
         import helper
-        # @TODO need to parse user options here for data
+
+        if parent.was_closed:
+            parent.show()
 
         new_window_position = parent.pos()
 
@@ -499,6 +502,9 @@ class SessionData:
         # @TODO Add matplotlib stacked bar graph for cluster %
 
         new_window_position = parent.pos()
+
+        if parent.was_closed:
+            parent.show()
 
         if update:
             options = self.h_view_2d.camera.get_state()

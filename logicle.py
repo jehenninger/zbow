@@ -51,7 +51,6 @@ def default_transform_data(raw, params):
 
     transformed_data = pd.DataFrame(data=transformed_data, columns=params)
 
-    print('Debug')
     return transformed_data
 
 
