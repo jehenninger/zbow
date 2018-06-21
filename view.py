@@ -115,3 +115,16 @@ def update_cluster_table(cluster_table, tab_cluster_data):
             mean_sil.setBackground(QtGui.QColor(200, 0, 0, 50))
 
     # cluster_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers & QtWidgets.QAbstractItemView.DoubleClicked)
+
+
+def start_progress_bar(progress_bar, start, stop):
+    progress_bar.setMinimum(start)
+    progress_bar.setMaximum(stop)
+    progress_bar.setValue(start)
+
+
+def update_progress_bar(progress_bar, steps=1):
+    progress_bar.setValue(progress_bar.value() + steps)
+
+    if progress_bar.value() == progress_bar.maximum():
+        progress_bar.reset()

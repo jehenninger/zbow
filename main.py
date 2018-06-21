@@ -4,11 +4,12 @@ from PyQt5 import QtGui
 from window import Ui_MainWindow
 import model
 import view
+import helper
 
 
-class scatterWindow(QtWidgets.QMainWindow):
+class ScatterWindow(QtWidgets.QMainWindow):
     def __init__(self):
-        super(scatterWindow, self).__init__()
+        super(ScatterWindow, self).__init__()
 
 
 class Main(Ui_MainWindow):
@@ -26,13 +27,15 @@ class Main(Ui_MainWindow):
 
         # instance data class and other windows
         self.data = model.SessionData()
-        self.scatter3DWindow = scatterWindow()
-        self.tern2DWindow = scatterWindow()
+        self.scatter3DWindow = ScatterWindow()
+        self.tern2DWindow = ScatterWindow()
 
         # initialize fields and defaults
         self.clusterSampleSize.setText("10000")
         self.clusterMinClusterSize.setText("25")
         self.clusterMinSamples.setText("1")
+
+        self.progressBar.setValue(0)
 
         cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary',
                              'default rgb', 'linear ternary', 'linear rgb']
@@ -95,6 +98,8 @@ class Main(Ui_MainWindow):
         # @TODO Add shortcut for menu items, like loading data
         import pandas as pd
 
+        view.start_progress_bar(self.progressBar, start=0, stop=4)
+
         self.data.screen_size = self.screen_size
         self.data.OS = self.OS
 
@@ -110,6 +115,8 @@ class Main(Ui_MainWindow):
         # fill parameter table
         self.data.param_combo_box_list = view.init_param_table(self.parameterTable, self.data.params)
 
+        view.update_progress_bar(self.progressBar)
+        QtWidgets.QApplication.processEvents()
         # transform data
         self.data.transform_data()
 
@@ -117,7 +124,8 @@ class Main(Ui_MainWindow):
         self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
                                self.data.raw.shape[0].__str__() + ' sampled cells)')
 
-
+        view.update_progress_bar(self.progressBar)
+        QtWidgets.QApplication.processEvents()
         # initialize 2D and 3D zbow graph
         default_position = [0.5 * self.screen_size[0], 0.05 * self.screen_size[1]]
         self.scatter3DWindow.move(default_position[0], default_position[1])
@@ -132,7 +140,12 @@ class Main(Ui_MainWindow):
                                scale=self.ternScaleOption.currentIndex(),
                                color=self.ternColorOption.currentIndex())
 
+        view.update_progress_bar(self.progressBar)
+        QtWidgets.QApplication.processEvents()
         self.cluster_data()
+
+        view.update_progress_bar(self.progressBar)
+        QtWidgets.QApplication.processEvents()
         self.data.outliers_removed = False
 
     def update_params(self):
@@ -144,9 +157,12 @@ class Main(Ui_MainWindow):
     def save_data(self):
         from datetime import datetime
 
+        num_of_progress_bar_steps = 4 + len(self.data.tab_cluster_data['id'])
         save_true = True
 
         if save_true:
+            view.start_progress_bar(self.progressBar, start=0, stop=num_of_progress_bar_steps)
+
             # get directory to save to
             self.data.save_folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select directory to save output',
                                                                                directory=os.path.dirname(self.data.file_name))
@@ -159,8 +175,8 @@ class Main(Ui_MainWindow):
             if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_backgates')):
                 os.makedirs(os.path.join(self.data.save_folder, 'cluster_backgates'))
 
-            if not os.path.isdir(os.path.join(self.data.save_folder, 'bar_graphs')):
-                os.makedirs(os.path.join(self.data.save_folder, 'bar_graphs'))
+            if not os.path.isdir(os.path.join(self.data.save_folder, 'bar_graphs_and_cluster_plots')):
+                os.makedirs(os.path.join(self.data.save_folder, 'bar_graphs_and_cluster_plots'))
 
             if not os.path.isdir(os.path.join(self.data.save_folder, 'cluster_solutions')):
                 os.makedirs(os.path.join(self.data.save_folder, 'cluster_solutions'))
@@ -199,16 +215,22 @@ class Main(Ui_MainWindow):
                                'noise_cluster_idx': self.data.noise_cluster_idx
                                }
 
+            del cluster_solution
+
             metadata_output = pd.DataFrame.from_dict(metadata_output, orient='index')
             metadata_output.to_csv(path_or_buf=os.path.join(self.data.save_folder, 'cluster_solutions',
                                                             self.data.sample_name + '_metadata.csv'),
                                    index=True, header=False)
 
+            view.update_progress_bar(self.progressBar)
+            QtWidgets.QApplication.processEvents()
+
         make_graph_output = True
 
         if make_graph_output:
             self.data.make_output_plots(scale=self.ternScaleOption.currentIndex(),
-                                    color=self.ternColorOption.currentIndex())
+                                        color=self.ternColorOption.currentIndex(),
+                                        progress_bar=self.progressBar)
 
     def restore_data(self):
         # reinitialize auto_cluster data

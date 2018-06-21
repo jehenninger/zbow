@@ -1,3 +1,18 @@
+from matplotlib import pyplot as plt
+import numpy as np
+from PyQt5 import QtWidgets, QtCore
+
+
+# class ProgressDialog(QtWidgets.QProgressDialog):
+#     def __init__(self):
+#         super(ProgressDialog, self).__init__()
+#
+#         self.setCancelButton(None)
+#         self.setMinimumDuration(0)
+#         self.setAutoReset(False)
+#         self.setGeometry(200, 80, 250, 20)
+
+
 def distinguishable_colors(number_of_colors_needed):
     # this is a look up table for 256 colors. Input is the number of colors needed.
 
@@ -134,3 +149,40 @@ def distinguishable_colors(number_of_colors_needed):
     output = color_library[0:number_of_colors_needed]
 
     return output
+
+
+def rand_jitter(arr):
+    stdev = 0.1
+    return arr + np.random.randn(len(arr)) * stdev
+
+
+def jitter(x, y, s=20, c='b', marker='o', cmap=None, norm=None, vmin=None, vmax=None, alpha=None, linewidths=None,
+           verts=None, hold=None, **kwargs):
+    return plt.scatter(rand_jitter(x), y, s=s, c=c, marker=marker, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax,
+                       alpha=alpha, linewidths=linewidths, verts=verts, hold=hold, **kwargs)
+
+
+# def start_progress_bar(start, stop, main_label, sub_label=''):
+#     progress_dialog = ProgressDialog()
+#
+#     progress_dialog.setMinimum(start)
+#     progress_dialog.setMaximum(stop)
+#     progress_dialog.setValue(start)
+#
+#     progress_dialog.setLabel(QtWidgets.QLabel(main_label))
+#     progress_dialog.setLabelText(sub_label)
+#
+#     progress_dialog.show()
+#
+#     return progress_dialog
+
+#
+# def update_progress_bar(progress_dialog, sub_label, steps=1):
+#     progress_dialog.setLabelText(sub_label)
+#
+#     progress_dialog.setValue(progress_dialog.value() + steps)
+#
+#     if progress_dialog.value() != progress_dialog.maximum():
+#         return progress_dialog
+#     else:
+#         progress_dialog.reset()

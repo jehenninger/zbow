@@ -2,15 +2,7 @@ change size of scatter and ternary graphs to reflect the user's screen
 
 make sure things work with Windows and MacOS
 
-make icon something zebrabow-y!
-
 3D scatter has some antialiasing bugs that haven't been fixed in vispy. Ignore for now.
-
-add cluster plot and bar plot (upon saving)
-
-add wait dialogs to everything
-
-save backgate plots
 
 write the update_parameters function
 
@@ -20,3 +12,5 @@ When the support is there, I would like to export the 3D Vispy graph as an inter
 manipulated in powerpoint.
 
 may still need a way of removing extreme points
+
+add Gini coefficient??

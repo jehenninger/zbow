@@ -4,6 +4,7 @@ import pandas as pd
 from PyQt5 import QtWidgets
 import os
 import numpy as np
+import view
 
 
 # import matplotlib as mpl
@@ -584,11 +585,14 @@ class SessionData:
             parent.move(new_window_position.x(), new_window_position.y())
             parent.show()
 
-    def make_output_plots(self, scale, color):
+    def make_output_plots(self, scale, color, progress_bar):
         import ternary
         from matplotlib import pyplot as plt
+        from matplotlib import ticker
         import helper
         from scipy import stats as sd
+        import random
+        import numpy as np
 
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
@@ -664,9 +668,13 @@ class SessionData:
 
             plt.close(tern_figure)
 
-        ######### BAR GRAPH #########
+            view.update_progress_bar(progress_bar)
+            QtWidgets.QApplication.processEvents()
+
+        ######### BAR GRAPH AND CLUSTER PLOT #########
 
         bar_true = True
+        cluster_plot_true = True
 
         if bar_true:
             bar_data = self.tab_cluster_data['percentage']
@@ -697,7 +705,7 @@ class SessionData:
             plt.ylim(0, 100)
             plt.xticks([])
 
-            bar_filename = os.path.join(self.save_folder, 'bar_graphs', self.sample_name)
+            bar_filename = os.path.join(self.save_folder, 'bar_graphs_and_cluster_plots', self.sample_name)
 
             plt.savefig(bar_filename + 'bar_graph.png',
                         dpi=300, transparent=True, pad_inches=0, Bbox='tight')
@@ -707,6 +715,47 @@ class SessionData:
 
             plt.close(bar_figure)
 
+            view.update_progress_bar(progress_bar)
+            QtWidgets.QApplication.processEvents()
+
+        if cluster_plot_true:
+
+            cluster_figure, cluster_ax = plt.subplots()
+            cluster_figure.set_size_inches(3, 6)
+            cluster_figure.set_dpi(300)
+
+            cluster_ax.boxplot(bar_data, sym='', vert=True, medianprops=dict(color='k'))
+
+            x_coord = [1] * len(bar_data)
+
+            bar_data_square = [i**2 for i in bar_data]
+
+            x_fudge_factor = np.divide(x_coord, bar_data_square)
+            x_fudge_factor[x_fudge_factor > 0.2] = 0.2
+            x_fudge_factor[x_fudge_factor < 0.02] = 0.02
+
+            x_fudge_choice = [random.uniform(-x_fudge_factor[i], x_fudge_factor[i]) for i, val in enumerate(x_fudge_factor)]
+
+            x_coord = np.array(x_coord) + np.array(x_fudge_choice)
+
+            bar_color['alpha'] = [0.7] * len(bar_color)
+            bar_color = [tuple(x) for x in bar_color.values]
+
+            cluster_ax.scatter(x_coord, bar_data, s=150, c=bar_color)
+
+            plt.ylim(0, 100)
+            cluster_ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
+
+            plt.savefig(bar_filename + 'cluster_graph.png',
+                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+
+            plt.savefig(bar_filename + 'cluster_graph.eps',
+                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+
+            plt.close(cluster_figure)
+
+            view.update_progress_bar(progress_bar)
+            QtWidgets.QApplication.processEvents()
 
         ######### BACKGATE PLOTS #####
 
@@ -728,16 +777,33 @@ class SessionData:
 
                 self.make_backgate_plot(i, quadrant)
 
+                view.update_progress_bar(progress_bar)
+                QtWidgets.QApplication.processEvents()
+
     def make_backgate_plot(self, cluster_id, quadrant):
         from matplotlib import pyplot as plt
 
         color_data = np.empty([self.custom_transformed.shape[0], self.custom_transformed.shape[1]])
+        scatter_data = np.empty([self.default_transformed.shape[0], self.default_transformed.shape[1]])
         color_data[:] = 0.8  # grey for non-highlighted cells
 
         highlight_cells = self.cluster_data_idx == cluster_id
         highlight_cells = pd.Series(highlight_cells, name='bools')
 
-        color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values].as_matrix()
+        gray_cells = np.invert(highlight_cells)
+
+        color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values]
+        color_data = pd.DataFrame(color_data)
+
+        scatter_data = self.default_transformed[['RFP', 'YFP', 'CFP']]
+
+        highlight_cell_find = np.where(highlight_cells)[0]
+        gray_cell_find = np.where(gray_cells)[0]
+
+        new_order = pd.concat([pd.Series(gray_cell_find), pd.Series(highlight_cell_find)])
+
+        color_data = color_data.iloc[new_order.values.tolist()]
+        scatter_data = scatter_data.iloc[new_order.values.tolist()]
 
         backgate_figure, (backgate_ax1, backgate_ax2) = plt.subplots(1, 2, sharey='all')
         backgate_figure.set_size_inches(7.5, 3.75)
@@ -756,25 +822,46 @@ class SessionData:
         backgate_ax2.set_xticklabels([])
         backgate_ax2.set_yticklabels([])
 
-        backgate_ax1.scatter(self.default_transformed['YFP'], self.default_transformed['CFP'],
-                             s=2, c=color_data)
+        backgate_ax1.scatter(scatter_data['YFP'], scatter_data['CFP'],
+                             s=2, c=color_data.as_matrix())
+
+        # backgate_ax1.scatter(self.default_transformed['YFP'], self.default_transformed['CFP'],
+        #                      s=2, c=color_data)
+
+        # if quadrant is 1:
+        #     quad_data = self.default_transformed[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] > 0.5)]
+        #     quad_color = color_data[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] > 0.5)]
+        # elif quadrant is 2:
+        #     quad_data = self.default_transformed[
+        #         (self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] > 0.5)]
+        #     quad_color = color_data[(self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] > 0.5)]
+        # elif quadrant is 3:
+        #     quad_data = self.default_transformed[
+        #         (self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] < 0.5)]
+        #     quad_color = color_data[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] < 0.5)]
+        # elif quadrant is 4:
+        #     quad_data = self.default_transformed[
+        #         (self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
+        #     quad_color = color_data[(self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
 
         if quadrant is 1:
-            quad_data = self.default_transformed[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] > 0.5)]
-            quad_color = color_data[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] > 0.5)]
+            quad_data = scatter_data[(scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] > 0.5)]
+            quad_color = color_data[(scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] > 0.5)]
         elif quadrant is 2:
-            quad_data = self.default_transformed[
-                (self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] > 0.5)]
-            quad_color = color_data[(self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] > 0.5)]
+            quad_data = scatter_data[
+                (scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] > 0.5)]
+            quad_color = color_data[(scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] > 0.5)]
         elif quadrant is 3:
             quad_data = self.default_transformed[
-                (self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] < 0.5)]
-            quad_color = color_data[(self.default_transformed['YFP'] < 0.5) & (self.default_transformed['CFP'] < 0.5)]
+                (scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] < 0.5)]
+            quad_color = color_data[(scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] < 0.5)]
         elif quadrant is 4:
             quad_data = self.default_transformed[
-                (self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
-            quad_color = color_data[(self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
+                (scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] < 0.5)]
+            quad_color = color_data[(scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] < 0.5)]
 
+        quad_color['alpha'] = [1.0] * len(quad_color)
+        quad_color = [tuple(x) for x in quad_color.values]
         backgate_ax2.scatter(quad_data['YFP'], quad_data['RFP'],
                              s=2, c=quad_color)
 
