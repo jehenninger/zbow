@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
+from scipy import stats as st
 
 
 # class ProgressDialog(QtWidgets.QProgressDialog):
@@ -160,6 +161,37 @@ def jitter(x, y, s=20, c='b', marker='o', cmap=None, norm=None, vmin=None, vmax=
            verts=None, hold=None, **kwargs):
     return plt.scatter(rand_jitter(x), y, s=s, c=c, marker=marker, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax,
                        alpha=alpha, linewidths=linewidths, verts=verts, hold=hold, **kwargs)
+
+
+def gini_coeff(array):
+    # based on bottom eq: http://www.statsdirect.com/help/content/image/stat0206_wmf.gif
+    # from: http://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm
+    if len(array) > 1:
+        array = array.flatten()  # all values are treated equally, arrays must be 1d
+        array = np.divide(array, [100] * len(array))  # gini must have frequency, not percentage
+
+        if np.amin(array) < 0:
+            array -= np.amin(array)  # values cannot be negative
+        array += 0.0000001  # values cannot be 0
+        array = np.sort(array)  # values must be sorted
+        index = np.arange(1, array.shape[0] + 1)  # index per array element
+        n = array.shape[0]  # number of array elements
+        output = round((np.sum((2 * index - n - 1) * array)) / (n * np.sum(array)), 4)  # Gini coefficient
+    else:
+        output = 'Insufficient clusters'
+
+    return output
+
+
+def shannon_entropy(array):
+    if len(array) > 1:
+        array = array.flatten()  # all values are treated equally, arrays must be 1d
+        array = np.divide(array, [100] * len(array))
+        output = round(st.entropy(array), 4)
+    else:
+        output = 'Insufficient clusters'
+
+    return output
 
 
 # def start_progress_bar(start, stop, main_label, sub_label=''):

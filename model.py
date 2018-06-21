@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets
 import os
 import numpy as np
 import view
+import helper
 
 
 # import matplotlib as mpl
@@ -26,6 +27,7 @@ class SessionData:
         self.raw_filtered = pd.DataFrame
         self.data_size = int
         self.noise_cluster_idx = int
+        self.red_only_cluster_idx = int
         self.default_transformed = pd.DataFrame
         self.linear_transformed = pd.DataFrame
         self.default_ternary = pd.DataFrame
@@ -40,6 +42,9 @@ class SessionData:
         self.outlier_scores = []
         self.outliers_removed = bool
         self.use_previous_clustering_solution = bool
+
+        self.gini = float
+        self.shannon = float
 
         self.h_canvas_3d = None
         self.h_view_3d = None
@@ -215,11 +220,7 @@ class SessionData:
         return(data)
 
     def make_tabulated_cluster_data(self):
-        # cluster_num = max(self.cluster_data_idx) + 1
-        cluster_num = len(set(self.cluster_data_idx))
         old_cluster_id = set(self.cluster_data_idx)
-
-        old_cluster_data = self.cluster_data_idx
 
         mean_cluster_color = pd.DataFrame(data=None, columns=['R', 'G', 'B'])
         mean_sil = []
@@ -246,6 +247,11 @@ class SessionData:
         cluster_data_freq = cluster_data.value_counts(normalize=True, sort=False)
         cluster_data_freq = round(100 * cluster_data_freq, 1)
 
+        # find red only cluster
+        total = np.sum(mean_cluster_color, axis=1)
+        percent_red = np.divide(mean_cluster_color['R'], total)
+
+        self.red_only_cluster_idx = np.where(percent_red == max(percent_red))[0]
         # cluster_data_counts.index
         tab_cluster_data = {'id': cluster_id,
                             'mean R': mean_cluster_color['R'],
@@ -257,8 +263,17 @@ class SessionData:
 
         self.tab_cluster_data = pd.DataFrame(data=tab_cluster_data)
         self.tab_cluster_data.loc[self.noise_cluster_idx, 'id'] = 'noise'  # if we change where the noise cluster is, must change this
+        self.tab_cluster_data.loc[self.red_only_cluster_idx, 'id'] = 'red only'
         self.tab_cluster_data = self.tab_cluster_data.sort_values(by="percentage", ascending=False)
         self.tab_cluster_data = self.tab_cluster_data[['id', 'num of cells', 'percentage', 'mean sil', 'mean R', 'mean G', 'mean B']]
+
+        # calculate Gini and Shannon coefficient
+        diversity_data = self.tab_cluster_data
+        diversity_data = diversity_data[diversity_data['id'] != 'noise']
+        diversity_data = diversity_data[diversity_data['id'] != 'red_only']['percentage']
+
+        self.gini = helper.gini_coeff(diversity_data.as_matrix())
+        self.shannon = helper.shannon_entropy(diversity_data.as_matrix())
 
     def evaluate_cluster_solution(self, data):
         from sklearn import metrics

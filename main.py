@@ -37,6 +37,9 @@ class Main(Ui_MainWindow):
 
         self.progressBar.setValue(0)
 
+        self.giniCoeff.setText('NA')
+        self.shannonEntropy.setText('NA')
+
         cluster_data_list = ['custom ternary', 'custom rgb', 'default ternary',
                              'default rgb', 'linear ternary', 'linear rgb']
         self.clusterOnData.insertItems(0, cluster_data_list)
@@ -212,7 +215,10 @@ class Main(Ui_MainWindow):
                                'sample_size': cluster_solution.shape[0],
                                'HDBSCAN_min_cluster_size': self.clusterMinClusterSize.text(),
                                'HDBSCAN_min_samples': self.clusterMinSamples.text(),
-                               'noise_cluster_idx': self.data.noise_cluster_idx
+                               'noise_cluster_idx': self.data.noise_cluster_idx,
+                               'red_only_idx': self.data.red_only_cluster_idx,
+                               'gini_coefficient': self.data.gini,
+                               'shannon_entropy': self.data.shannon
                                }
 
             del cluster_solution
@@ -268,6 +274,8 @@ class Main(Ui_MainWindow):
                                self.data.raw.shape[0].__str__() + ' sampled cells) - RELOADED')
 
         self.cluster_data()
+        self.giniCoeff.setText(str(self.data.gini))
+        self.shannonEntropy.setText(str(self.data.shannon))
         self.data.outliers_removed = False
 
     def view_outliers(self):
@@ -303,6 +311,8 @@ class Main(Ui_MainWindow):
                                self.data.raw_filtered.shape[0].__str__() + ' sampled cells)')
 
         self.cluster_data()
+        self.giniCoeff.setText(str(self.data.gini))
+        self.shannonEntropy.setText(str(self.data.shannon))
 
         self.update_plots()
 
@@ -312,6 +322,8 @@ class Main(Ui_MainWindow):
 
         self.data.auto_cluster(self.clusterOnData.currentIndex(), int(self.clusterMinClusterSize.text()),
                                int(self.clusterMinSamples.text()), evaluate_cluster=eval_cluster_bool)
+        self.giniCoeff.setText(str(self.data.gini))
+        self.shannonEntropy.setText(str(self.data.shannon))
 
         view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
 
@@ -333,6 +345,8 @@ class Main(Ui_MainWindow):
                 con = False
                 break
             else:
+                if 'red only' in str(temp_table_object):
+                    temp_table_object = self.data.red_only_cluster_idx
                 clusters_to_join.append(temp_table_object)
                 clusters_to_join[i] = int(clusters_to_join[i])
                 con = True
@@ -340,6 +354,8 @@ class Main(Ui_MainWindow):
         if con:
             self.data.join_clusters_together(clusters_to_join, self.clusterOnData.currentIndex(),
                                              evaluate_cluster=eval_cluster_bool)
+            self.giniCoeff.setText(str(self.data.gini))
+            self.shannonEntropy.setText(str(self.data.shannon))
 
             view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
             self.update_plots()
@@ -353,6 +369,8 @@ class Main(Ui_MainWindow):
 
             if 'noise' in str(temp_table_object):
                 clusters_to_highlight.append(int(self.data.noise_cluster_idx))
+            elif 'red only' in str(temp_table_object):
+                clusters_to_highlight.append(int(self.data.red_only_cluster_idx))
             else:
                 clusters_to_highlight.append(temp_table_object)
                 clusters_to_highlight[i] = int(clusters_to_highlight[i])
@@ -399,9 +417,13 @@ class Main(Ui_MainWindow):
             print('Can not split noise cluster')  # TODO change this to a dialog message box
 
         else:
+            if 'red only' in str(cluster_to_split):
+                cluster_to_split = self.data.red_only_cluster_idx
             cluster_to_split = int(cluster_to_split)
             self.data.split_cluster_in_two(cluster_to_split, self.clusterOnData.currentIndex(),
                                            evaluate_cluster=eval_cluster_bool)
+            self.giniCoeff.setText(str(self.data.gini))
+            self.shannonEntropy.setText(str(self.data.shannon))
 
             view.update_cluster_table(self.clusterInformationTable, self.data.tab_cluster_data)
             self.update_plots()
