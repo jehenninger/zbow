@@ -428,7 +428,6 @@ class Main(Ui_MainWindow):
                                      'a time and chose the first selected cluster')
 
             cluster_to_split = cluster_to_split[0].text()
-            print('cluster to split \n', cluster_to_split)
 
             if 'noise' in str(cluster_to_split):
                 helper.error_message(self.error_dialog, 'Can not split noise cluster')
