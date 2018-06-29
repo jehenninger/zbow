@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import math
 import subprocess
-
+import sys
+import os
 
 def default_transform_data(raw, params):
 
@@ -31,7 +32,14 @@ def default_transform_data(raw, params):
 
         temp_data = []
         for j in range(num_of_chunks):
-            command = ['bin/logicle/logicle.out']
+            if getattr(sys, 'frozen', False):
+                # running in a bundle
+                bundle_dir = sys._MEIPASS
+                command = [os.path.join(bundle_dir, 'bin/logicle/logicle.out')]
+            else:
+                # running live
+                command = ['bin/logicle/logicle.out']
+
             data = raw_chunks[j]
             data = data[p].tolist()
             data_as_string = [str(i) for i in data]
@@ -79,7 +87,14 @@ def custom_transform_data(raw, params):
         raw_chunks = np.array_split(raw, num_of_chunks)
         temp_data = []
         for j in range(num_of_chunks):
-            command = ['bin/logicle/logicle.out']
+            if getattr(sys, 'frozen', False):
+                # running in a bundle
+                bundle_dir = sys._MEIPASS
+                command = [os.path.join(bundle_dir, 'bin/logicle/logicle.out')]
+            else:
+                # running live
+                command = ['bin/logicle/logicle.out']
+
             data = raw_chunks[j]
             data = data[p].tolist()
             data_as_string = [str(i) for i in data]

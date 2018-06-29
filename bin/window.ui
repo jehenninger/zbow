@@ -436,8 +436,15 @@
     </property>
     <addaction name="actionRestore"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionMake_cluster_plots"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuData_processing"/>
+   <addaction name="menuTools"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoad">
@@ -480,6 +487,11 @@
   <action name="actionLoadClusteringSolution">
    <property name="text">
     <string>Load clustering solution</string>
+   </property>
+  </action>
+  <action name="actionMake_cluster_plots">
+   <property name="text">
+    <string>Make cluster plots</string>
    </property>
   </action>
  </widget>

@@ -230,6 +230,8 @@ class Ui_MainWindow(object):
         self.menuFile.setObjectName("menuFile")
         self.menuData_processing = QtWidgets.QMenu(self.menubar)
         self.menuData_processing.setObjectName("menuData_processing")
+        self.menuTools = QtWidgets.QMenu(self.menubar)
+        self.menuTools.setObjectName("menuTools")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -246,6 +248,8 @@ class Ui_MainWindow(object):
         self.actionQuit.setObjectName("actionQuit")
         self.actionLoadClusteringSolution = QtWidgets.QAction(MainWindow)
         self.actionLoadClusteringSolution.setObjectName("actionLoadClusteringSolution")
+        self.actionMake_cluster_plots = QtWidgets.QAction(MainWindow)
+        self.actionMake_cluster_plots.setObjectName("actionMake_cluster_plots")
         self.menuFile.addAction(self.actionLoad)
         self.menuFile.addAction(self.actionLoadClusteringSolution)
         self.menuFile.addSeparator()
@@ -254,8 +258,10 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionClear)
         self.menuFile.addSeparator()
         self.menuData_processing.addAction(self.actionRestore)
+        self.menuTools.addAction(self.actionMake_cluster_plots)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuData_processing.menuAction())
+        self.menubar.addAction(self.menuTools.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -290,6 +296,7 @@ class Ui_MainWindow(object):
         self.clusterInformationBox.setTitle(_translate("MainWindow", "cluster information"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuData_processing.setTitle(_translate("MainWindow", "Data processing"))
+        self.menuTools.setTitle(_translate("MainWindow", "Tools"))
         self.actionLoad.setText(_translate("MainWindow", "Load data"))
         self.actionLoad.setShortcut(_translate("MainWindow", "Ctrl+L"))
         self.actionSave.setText(_translate("MainWindow", "Save data/images"))
@@ -300,6 +307,7 @@ class Ui_MainWindow(object):
         self.actionQuit.setText(_translate("MainWindow", "Quit"))
         self.actionQuit.setShortcut(_translate("MainWindow", "Ctrl+C"))
         self.actionLoadClusteringSolution.setText(_translate("MainWindow", "Load clustering solution"))
+        self.actionMake_cluster_plots.setText(_translate("MainWindow", "Make cluster plots"))
 
 
 if __name__ == "__main__":

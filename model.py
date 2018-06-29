@@ -1,12 +1,21 @@
-import subprocess
-import pickle
 import pandas as pd
 from PyQt5 import QtWidgets
 import os
 import numpy as np
 import view
 import helper
-
+import logicle
+import fcsparser
+import math
+import hdbscan
+from sklearn import cluster
+from vispy import visuals, scene
+from vispy.color import Color, ColorArray
+import ternary
+from matplotlib import pyplot as plt
+from matplotlib import ticker
+from scipy import stats as sd
+from random import uniform
 
 # import matplotlib as mpl
 # mpl.use('Agg')
@@ -57,19 +66,17 @@ class SessionData:
     # methods
 
     def fcs_read(self, sample_size, reload=False):
-
-        import fcsparser
-
         if reload:
             pass
         else:
             self.file_name, _ = QtWidgets.QFileDialog.getOpenFileName(caption='Select flow cytometry file',
-                                                                      directory='/Users/jon/Desktop',
+                                                                      directory='~/',
                                                                       filter='FCS file ( *.fcs);; Text file (*.csv)')
 
         #self.file_name ='/Users/jon/Desktop/WKM_fish_023_023_cfp+yfp+ or rfp+_myeloid.fcs'  # @DEBUG temporary to speed up debugging
 
         self.path_name = os.path.dirname(os.path.abspath(self.file_name))
+
         _, file_extension = os.path.splitext(self.file_name)
 
         if file_extension == '.fcs':
@@ -111,7 +118,6 @@ class SessionData:
         return success
 
     def transform_data(self, outliers_removed=False):
-        import logicle
         # initialize outputs
 
         param_idx = self.parse_params()
@@ -175,7 +181,6 @@ class SessionData:
         return norm
 
     def ternary_transform(self, rgb_data):
-        import math
 
         # old way before I found library. Still bugs with the old method
         total = rgb_data.sum(axis='columns')
@@ -283,7 +288,6 @@ class SessionData:
 
     def auto_cluster(self, cluster_on_data, min_cluster_size=25, min_samples=1, evaluate_cluster=False, prev_clustering_solution=False):
         # from sklearn.cluster import DBSCAN
-        import hdbscan
 
         if prev_clustering_solution:
             self.auto_cluster_idx = self.cluster_data_idx
@@ -317,7 +321,6 @@ class SessionData:
         self.make_tabulated_cluster_data()
 
     def split_cluster_in_two(self, cluster_to_split, cluster_on_data, evaluate_cluster=False):
-        from sklearn import cluster
 
         # cluster_to_split = self.tab_cluster_data[self.tab_cluster_data['id'] == cluster_to_split].index[0]
 
@@ -375,10 +378,6 @@ class SessionData:
         self.make_tabulated_cluster_data()
 
     def zbow_3d_plot(self, parent, scale, color, update=False, highlight_cells=None, highlight_color=False):
-        from vispy import app, visuals, scene
-        from vispy.color import Color, ColorArray
-        import helper
-
         if parent.was_closed:
             parent.show()
 
@@ -394,6 +393,8 @@ class SessionData:
             scale_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
         elif scale == 2:
             scale_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+        else:
+            scale_data = self.custom_transformed.as_matrix()
 
         # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
         if color == 0:
@@ -494,12 +495,6 @@ class SessionData:
             parent.show()
 
     def zbow_2d_plot(self, parent, scale, color, update=False, highlight_cells=None, highlight_color=False):
-        from vispy import app, visuals, scene
-        from vispy.color import Color, ColorArray
-        import helper
-        import scipy.stats as st
-        # @TODO make axes and center the plot better
-        # @TODO Add matplotlib stacked bar graph for cluster %
 
         new_window_position = parent.pos()
 
@@ -516,6 +511,8 @@ class SessionData:
             scale_data = self.default_ternary.as_matrix()
         elif scale == 2:
             scale_data = self.linear_ternary.as_matrix()
+        else:
+            scale_data = self.custom_ternary.as_matrix()
 
         # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
         if color == 0:
@@ -607,14 +604,6 @@ class SessionData:
             parent.show()
 
     def make_output_plots(self, scale, color, progress_bar):
-        import ternary
-        from matplotlib import pyplot as plt
-        from matplotlib import ticker
-        import helper
-        from scipy import stats as sd
-        import random
-        import numpy as np
-
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
             scale_data = self.custom_transformed.as_matrix()
@@ -652,158 +641,143 @@ class SessionData:
         total = scale_data.sum(axis=1)
         scale_data = scale_data/total[:, None]
 
-        tern_true = True
 
-        if tern_true:
-            ###### TERNARY PLOT WITH CONTOUR ######
-            # get Gaussian kernel for contour plot
-            xmin = 0
-            xmax = 1
-            ymin = 0
-            ymax = 1
+        ###### TERNARY PLOT WITH CONTOUR ######
+        # get Gaussian kernel for contour plot
+        xmin = 0
+        xmax = 1
+        ymin = 0
+        ymax = 1
 
-            X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
-            positions = np.vstack([X.ravel(), Y.ravel()])
-            values = np.vstack([contour_data[:, 0], contour_data[:, 1]])
-            kernel = sd.gaussian_kde(values)
-            Z = np.reshape(kernel(positions).T, X.shape)
+        X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
+        positions = np.vstack([X.ravel(), Y.ravel()])
+        values = np.vstack([contour_data[:, 0], contour_data[:, 1]])
+        kernel = sd.gaussian_kde(values)
+        Z = np.reshape(kernel(positions).T, X.shape)
 
-            # new way with library
-            scale = 1
-            tern_figure, tern_plot = ternary.figure(scale=scale)
-            tern_figure.set_size_inches(5.37, 5)  # this is proper scaling to approximate an equilateral triangle
-            tern_figure.set_dpi(300)
-            # tern_plot.set_title("ternary plot", fontsize=18)
-            tern_plot.boundary(linewidth=1.0)
-            tern_plot.gridlines(multiple=0.1, color='grey')
+        # new way with library
+        scale = 1
+        tern_figure, tern_plot = ternary.figure(scale=scale)
+        tern_figure.set_size_inches(5.37, 5)  # this is proper scaling to approximate an equilateral triangle
+        tern_figure.set_dpi(300)
+        # tern_plot.set_title("ternary plot", fontsize=18)
+        tern_plot.boundary(linewidth=1.0)
+        tern_plot.gridlines(multiple=0.1, color='grey')
 
-            tern_plot.scatter(scale_data, marker='o', color=color_data, s=2)
+        tern_plot.scatter(scale_data, marker='o', color=color_data, s=2)
 
-            tern_plot.clear_matplotlib_ticks()
+        tern_plot.clear_matplotlib_ticks()
 
-            plt.contour(X, Y, Z, colors='k', alpha=0.6, linewidths=1)
+        plt.contour(X, Y, Z, colors='k', alpha=0.6, linewidths=1)
 
-            ternary_filename = os.path.join(self.save_folder, 'ternary_plots', self.sample_name)
-            plt.savefig(ternary_filename + '.png', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
-            plt.savefig(ternary_filename + '.eps', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        ternary_filename = os.path.join(self.save_folder, 'ternary_plots', self.sample_name)
+        plt.savefig(ternary_filename + '.png', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.savefig(ternary_filename + '.eps', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
-            plt.close(tern_figure)
+        plt.close(tern_figure)
 
-            view.update_progress_bar(progress_bar)
-            QtWidgets.QApplication.processEvents()
+        view.update_progress_bar(progress_bar)
+        QtWidgets.QApplication.processEvents()
 
         ######### BAR GRAPH AND CLUSTER PLOT #########
+        bar_data = self.tab_cluster_data['percentage']
+        bar_color = self.tab_cluster_data[['mean R', 'mean G', 'mean B']]
 
-        bar_true = True
-        cluster_plot_true = True
+        bar_figure, bar_ax = plt.subplots()
+        bar_figure.set_size_inches(3, 6)
+        bar_figure.set_dpi(300)
 
-        if bar_true:
-            bar_data = self.tab_cluster_data['percentage']
-            bar_color = self.tab_cluster_data[['mean R', 'mean G', 'mean B']]
+        for j in range(0, len(bar_data)):
+            if j == 0:
+                b_col = bar_color.iloc[j].values.tolist()
+                b_col.append(1)
+                bar_ax.bar(0, bar_data.iloc[j], color=b_col)
 
-            bar_figure, bar_ax = plt.subplots()
-            bar_figure.set_size_inches(3, 6)
-            bar_figure.set_dpi(300)
+                total = bar_data.iloc[j]
+            else:
+                b_col = bar_color.iloc[j].values.tolist()
 
-            for j in range(0, len(bar_data)):
-                if j == 0:
-                    b_col = bar_color.iloc[j].values.tolist()
-                    b_col.append(1)
-                    bar_ax.bar(0, bar_data.iloc[j], color=b_col)
-
-                    total = bar_data.iloc[j]
+                if j == self.noise_cluster_idx:
+                    b_col.append(0)  # set noise cluster to total transparency
                 else:
-                    b_col = bar_color.iloc[j].values.tolist()
+                    b_col.append(1)
 
-                    if j == self.noise_cluster_idx:
-                        b_col.append(0)  # set noise cluster to total transparency
-                    else:
-                        b_col.append(1)
+                bar_ax.bar(0, bar_data.iloc[j], bottom=total, color=b_col)
+                total = total + bar_data.iloc[j]
 
-                    bar_ax.bar(0, bar_data.iloc[j], bottom=total, color=b_col)
-                    total = total + bar_data.iloc[j]
+        plt.ylim(0, 100)
+        plt.xticks([])
 
-            plt.ylim(0, 100)
-            plt.xticks([])
+        bar_filename = os.path.join(self.save_folder, 'bar_graphs_and_cluster_plots', self.sample_name)
 
-            bar_filename = os.path.join(self.save_folder, 'bar_graphs_and_cluster_plots', self.sample_name)
+        plt.savefig(bar_filename + 'bar_graph.png',
+                    dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
-            plt.savefig(bar_filename + 'bar_graph.png',
-                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.savefig(bar_filename + 'bar_graph.eps',
+                    dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
-            plt.savefig(bar_filename + 'bar_graph.eps',
-                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.close(bar_figure)
 
-            plt.close(bar_figure)
+        view.update_progress_bar(progress_bar)
+        QtWidgets.QApplication.processEvents()
 
-            view.update_progress_bar(progress_bar)
-            QtWidgets.QApplication.processEvents()
+        cluster_figure, cluster_ax = plt.subplots()
+        cluster_figure.set_size_inches(3, 6)
+        cluster_figure.set_dpi(300)
 
-        if cluster_plot_true:
+        cluster_ax.boxplot(bar_data, sym='', vert=True, medianprops=dict(color='k'))
 
-            cluster_figure, cluster_ax = plt.subplots()
-            cluster_figure.set_size_inches(3, 6)
-            cluster_figure.set_dpi(300)
+        x_coord = [1] * len(bar_data)
 
-            cluster_ax.boxplot(bar_data, sym='', vert=True, medianprops=dict(color='k'))
+        bar_data_square = [i**2 for i in bar_data]
 
-            x_coord = [1] * len(bar_data)
+        x_fudge_factor = np.divide(x_coord, bar_data_square)
+        x_fudge_factor[x_fudge_factor > 0.2] = 0.2
+        x_fudge_factor[x_fudge_factor < 0.02] = 0.02
 
-            bar_data_square = [i**2 for i in bar_data]
+        x_fudge_choice = [uniform(-x_fudge_factor[i], x_fudge_factor[i]) for i, val in enumerate(x_fudge_factor)]
 
-            x_fudge_factor = np.divide(x_coord, bar_data_square)
-            x_fudge_factor[x_fudge_factor > 0.2] = 0.2
-            x_fudge_factor[x_fudge_factor < 0.02] = 0.02
+        x_coord = np.array(x_coord) + np.array(x_fudge_choice)
 
-            x_fudge_choice = [random.uniform(-x_fudge_factor[i], x_fudge_factor[i]) for i, val in enumerate(x_fudge_factor)]
+        bar_color['alpha'] = [0.7] * len(bar_color)
+        bar_color = [tuple(x) for x in bar_color.values]
 
-            x_coord = np.array(x_coord) + np.array(x_fudge_choice)
+        cluster_ax.scatter(x_coord, bar_data, s=150, c=bar_color)
 
-            bar_color['alpha'] = [0.7] * len(bar_color)
-            bar_color = [tuple(x) for x in bar_color.values]
+        plt.ylim(0, 100)
+        cluster_ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
 
-            cluster_ax.scatter(x_coord, bar_data, s=150, c=bar_color)
+        plt.savefig(bar_filename + 'cluster_graph.png',
+                    dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
-            plt.ylim(0, 100)
-            cluster_ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
+        plt.savefig(bar_filename + 'cluster_graph.eps',
+                    dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
-            plt.savefig(bar_filename + 'cluster_graph.png',
-                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.close(cluster_figure)
 
-            plt.savefig(bar_filename + 'cluster_graph.eps',
-                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
-
-            plt.close(cluster_figure)
-
-            view.update_progress_bar(progress_bar)
-            QtWidgets.QApplication.processEvents()
+        view.update_progress_bar(progress_bar)
+        QtWidgets.QApplication.processEvents()
 
         ######### BACKGATE PLOTS #####
+        for i in set(self.cluster_data_idx):
+            meanG = np.mean(self.default_transformed.loc[self.cluster_data_idx == i, 'YFP'])
+            meanB = np.mean(self.default_transformed.loc[self.cluster_data_idx == i, 'CFP'])
 
-        backgate_true = True
+            if meanG < 0.5 < meanB:
+                quadrant = 1
+            elif meanB > 0.5 and meanG > 0.5:
+                quadrant = 2
+            elif meanB < 0.5 and meanG < 0.5:
+                quadrant = 3
+            elif meanB < 0.5 < meanG:
+                quadrant = 4
 
-        if backgate_true:
-            for i in set(self.cluster_data_idx):
-                meanG = np.mean(self.default_transformed.loc[self.cluster_data_idx == i, 'YFP'])
-                meanB = np.mean(self.default_transformed.loc[self.cluster_data_idx == i, 'CFP'])
+            self.make_backgate_plot(i, quadrant)
 
-                if meanG < 0.5 < meanB:
-                    quadrant = 1
-                elif meanB > 0.5 and meanG > 0.5:
-                    quadrant = 2
-                elif meanB < 0.5 and meanG < 0.5:
-                    quadrant = 3
-                elif meanB < 0.5 < meanG:
-                    quadrant = 4
-
-                self.make_backgate_plot(i, quadrant)
-
-                view.update_progress_bar(progress_bar)
-                QtWidgets.QApplication.processEvents()
+            view.update_progress_bar(progress_bar)
+            QtWidgets.QApplication.processEvents()
 
     def make_backgate_plot(self, cluster_id, quadrant):
-        from matplotlib import pyplot as plt
-
         color_data = np.empty([self.custom_transformed.shape[0], self.custom_transformed.shape[1]])
         scatter_data = np.empty([self.default_transformed.shape[0], self.default_transformed.shape[1]])
         color_data[:] = 0.8  # grey for non-highlighted cells

@@ -1,10 +1,19 @@
 import sys
-from PyQt5 import QtWidgets
-from PyQt5 import QtGui
 from window import Ui_MainWindow
 import model
 import view
 import helper
+import pandas as pd
+import os
+from PyQt5 import QtWidgets
+from PyQt5 import QtGui
+from matplotlib import pyplot as plt
+import numpy as np
+from random import uniform
+from matplotlib import ticker
+
+from PyQt5 import QtOpenGL  # necessary for pyinstaller
+from PyQt5 import QtTest  # necessary for pyinstaller
 
 
 class ScatterWindow(QtWidgets.QMainWindow):
@@ -36,6 +45,7 @@ class Main(Ui_MainWindow):
 
         # instance data class and other windows
         self.data = model.SessionData()
+
         self.scatter3DWindow = ScatterWindow()
         self.tern2DWindow = ScatterWindow()
         self.error_dialog = ErrorDialog()
@@ -88,6 +98,7 @@ class Main(Ui_MainWindow):
         self.actionClear.triggered.connect(self.clear_data)
         self.actionSave.triggered.connect(self.save_data)
         self.actionRestore.triggered.connect(self.restore_data)
+        self.actionMake_cluster_plots.triggered.connect(self.make_cluster_plots)
 
         # connect buttons
         self.removeOutliers.clicked.connect(self.remove_outliers)
@@ -107,7 +118,12 @@ class Main(Ui_MainWindow):
         self.ternScaleOption.activated.connect(self.update_plots)
 
     def load_data(self):
-        import pandas as pd
+
+        self.scatter3DWindow.move(0.60 * self.screen_size[0], 0.05 * self.screen_size[1])
+        self.scatter3DWindow.resize(0.20 * self.screen_size[0], 0.20*self.screen_size[0])
+
+        self.tern2DWindow.move(0.60 * self.screen_size[0], 0.45 * self.screen_size[1])
+        self.tern2DWindow.resize(0.20 * self.screen_size[0], 0.20*self.screen_size[0])
 
         view.start_progress_bar(self.progressBar, start=0, stop=4)
 
@@ -139,15 +155,11 @@ class Main(Ui_MainWindow):
             view.update_progress_bar(self.progressBar)
             QtWidgets.QApplication.processEvents()
             # initialize 2D and 3D zbow graph
-            default_position = [0.5 * self.screen_size[0], 0.05 * self.screen_size[1]]
-            self.scatter3DWindow.move(default_position[0], default_position[1])
-            # @TODO set default size of the 2D and 3D graphs so that they don't overlap
+
             self.data.zbow_3d_plot(self.scatter3DWindow,
                                    scale=self.scatterScaleOption.currentIndex(),
                                    color=self.scatterColorOption.currentIndex())
 
-            default_position = [0.5 * self.screen_size[0], 0.5 * self.screen_size[1]]
-            self.tern2DWindow.move(default_position[0], default_position[1])
             self.data.zbow_2d_plot(self.tern2DWindow,
                                    scale=self.ternScaleOption.currentIndex(),
                                    color=self.ternColorOption.currentIndex())
@@ -163,7 +175,36 @@ class Main(Ui_MainWindow):
             helper.error_message(self.error_dialog, 'Could not load .fcs or .csv file')
 
     def update_params(self):
-        print('not done yet')
+        self.scatter3DWindow.move(0.60 * self.screen_size[0], 0.05 * self.screen_size[1])
+        self.scatter3DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
+
+        self.tern2DWindow.move(0.60 * self.screen_size[0], 0.45 * self.screen_size[1])
+        self.tern2DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
+
+        # reinitialize auto_cluster data
+        self.data.tab_cluster_data = pd.Series
+        self.data.auto_cluster_idx = []
+
+        # transform data
+        self.data.transform_data()
+
+        # initialize 2D and 3D zbow graph
+        self.data.zbow_3d_plot(self.scatter3DWindow,
+                               scale=self.scatterScaleOption.currentIndex(),
+                               color=self.scatterColorOption.currentIndex())
+
+        self.data.zbow_2d_plot(self.tern2DWindow,
+                               scale=self.ternScaleOption.currentIndex(),
+                               color=self.ternColorOption.currentIndex())
+
+        # print successful load and display number of cells
+        self.fileLabel.setText(self.data.sample_name + '\n' + self.data.data_size.__str__() + ' total cells (' +
+                               self.data.raw.shape[0].__str__() + ' sampled cells) - PARAMETERS UPDATED')
+
+        self.cluster_data()
+        self.giniCoeff.setText(str(self.data.gini))
+        self.shannonEntropy.setText(str(self.data.shannon))
+        self.data.outliers_removed = False
 
     def clear_data(self):
         print('not done yet')
@@ -248,6 +289,13 @@ class Main(Ui_MainWindow):
             helper.error_message(self.error_dialog, 'Could not retrieve directory to save to')
 
     def restore_data(self):
+
+        self.scatter3DWindow.move(0.60 * self.screen_size[0], 0.05 * self.screen_size[1])
+        self.scatter3DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
+
+        self.tern2DWindow.move(0.60 * self.screen_size[0], 0.45 * self.screen_size[1])
+        self.tern2DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
+
         # reinitialize auto_cluster data
         self.data.tab_cluster_data = pd.Series
         self.data.auto_cluster_idx = []
@@ -263,17 +311,11 @@ class Main(Ui_MainWindow):
         # transform data
         self.data.transform_data()
 
-
         # initialize 2D and 3D zbow graph
-        default_position = [0.5 * self.screen_size[0], 0.05 * self.screen_size[1]]
-        self.scatter3DWindow.move(default_position[0], default_position[1])
-        # @TODO set default size of the 2D and 3D graphs so that they don't overlap
         self.data.zbow_3d_plot(self.scatter3DWindow,
                                scale=self.scatterScaleOption.currentIndex(),
                                color=self.scatterColorOption.currentIndex())
 
-        default_position = [0.5 * self.screen_size[0], 0.5 * self.screen_size[1]]
-        self.tern2DWindow.move(default_position[0], default_position[1])
         self.data.zbow_2d_plot(self.tern2DWindow,
                                scale=self.ternScaleOption.currentIndex(),
                                color=self.ternColorOption.currentIndex())
@@ -477,6 +519,73 @@ class Main(Ui_MainWindow):
     #     else:
     #         event.ignore()
 
+    def make_cluster_plots(self):
+        if isinstance(self.data.path_name, str):
+            default_path = self.data.path_name
+        else:
+            default_path = '~/'
+
+        file_list = QtWidgets.QFileDialog.getOpenFileNames(caption='Select cluster summary files',
+                                                           directory=default_path,
+                                                           filter='*Summary.csv')
+
+        QtWidgets.QApplication.processEvents()
+
+        if file_list[0]:
+            view.start_progress_bar(self.progressBar, start=0, stop=len(file_list[0])-1)
+            path_name = os.path.dirname(os.path.abspath(file_list[0][0]))
+            cluster_figure, cluster_ax = plt.subplots()
+            cluster_figure.set_dpi(300)
+            sample_name = list()
+            for i, file in enumerate(file_list[0]):
+                sample_name.append(os.path.splitext(os.path.basename(file))[0])
+                tab_data = pd.read_csv(file)
+                tab_data = tab_data[tab_data['id'] != 'noise']
+                bar_data = tab_data['percentage']
+                bar_color = tab_data[['mean R', 'mean G', 'mean B']]
+                cluster_ax.boxplot(bar_data, positions=[i+1], sym='', vert=True, medianprops=dict(color='k'))
+
+                x_coord = [i+1] * len(bar_data)
+
+                bar_data_square = [j ** 2 for j in bar_data]
+
+                x_fudge_factor = np.divide(x_coord, bar_data_square)
+                x_fudge_factor[x_fudge_factor > 0.2] = 0.2
+                x_fudge_factor[x_fudge_factor < 0.02] = 0.02
+
+                x_fudge_choice = [uniform(-x_fudge_factor[k], x_fudge_factor[k]) for k, val in enumerate(x_fudge_factor)]
+
+                x_coord = np.array(x_coord) + np.array(x_fudge_choice)
+
+                bar_color['alpha'] = [0.7] * len(bar_color)
+                bar_color = [tuple(x) for x in bar_color.values]
+
+                cluster_ax.scatter(x_coord, bar_data, s=100, c=bar_color)
+
+                view.update_progress_bar(self.progressBar)
+                QtWidgets.QApplication.processEvents()
+
+            plt.ylim(0, 100)
+            plt.xlim(0.5, len(file_list[0])+0.5)
+
+            sample_name = [x.replace('_Summary', '') for x in sample_name]
+            sample_name = [x[0:20] for x in sample_name]
+
+            plt.xticks(range(1, len(file_list[0])+1), sample_name)
+
+            cluster_ax.tick_params(axis='x', labelsize='x-small')
+            cluster_ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
+
+            plt.savefig(os.path.join(path_name, 'combined_cluster_graph.png'),
+                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+
+            plt.savefig(os.path.join(path_name, 'combined_cluster_graph.eps'),
+                        dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+
+            plt.close(cluster_figure)
+        else:
+            helper.error_message(self.error_dialog, 'No files selected')
+
     def save_pref(self):
         new_pref = {'sample_size': str(self.clusterSampleSize.text()),
                     'HDBSCAN_min_cluster_size': str(self.clusterMinClusterSize.text()),
@@ -490,15 +599,27 @@ class Main(Ui_MainWindow):
 
         new_pref_output = pd.DataFrame.from_dict(new_pref, orient='index')
 
-        new_pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)
+        if getattr(sys, 'frozen', False):
+            # running in a bundle
+            bundle_dir = sys._MEIPASS
+            pref_path = os.path.join(bundle_dir, 'bin/pref.csv')
+        else:
+            # running live
+            pref_path = 'bin/pref.csv'
+
+        new_pref_output.to_csv(path_or_buf=pref_path, index=True, header=False)
 
 
 if __name__ == "__main__":
-    import os
-    import pandas as pd
-
     app = QtWidgets.QApplication(sys.argv)
-    app.setWindowIcon(QtGui.QIcon('bin/logo.png'))
+
+    if getattr(sys, 'frozen', False):
+        # running in a bundle
+        bundle_dir = sys._MEIPASS
+        app.setWindowIcon(QtGui.QIcon(os.path.join(bundle_dir, 'bin/logo.png')))
+    else:
+        # running live
+        app.setWindowIcon(QtGui.QIcon('bin/logo.png'))
 
     screen = app.primaryScreen()
     size = screen.size()
@@ -506,15 +627,25 @@ if __name__ == "__main__":
     width = size.width()
 
     dialog = QtWidgets.QMainWindow()
-    dialog.move(0.05*width, 0.1*height)
+    dialog.resize(0.40*width, 0.9*height)
+    dialog.move(0.05*width, 0.05*height)
     prog = Main(dialog)
     prog.screen_size = [size.width(), size.height()]
 
+
     # write/read preferences file
-    pref_file_exists = os.path.isfile('bin/pref.csv')
+    if getattr(sys, 'frozen', False):
+        # running in a bundle
+        bundle_dir = sys._MEIPASS
+        pref_file_exists = os.path.isfile(os.path.join(bundle_dir, 'bin/pref.csv'))
+        pref_path = os.path.join(bundle_dir, 'bin/pref.csv')
+    else:
+        # running live
+        pref_file_exists = os.path.isfile('bin/pref.csv')
+        pref_path = 'bin/pref.csv'
 
     if pref_file_exists:
-        pref = pd.read_csv('bin/pref.csv', index_col=0, header=None)
+        pref = pd.read_csv(pref_path, index_col=0, header=None)
 
         cluster_sample_size = pref.loc['sample_size']
         cluster_sample_size = cluster_sample_size.iloc[0]
@@ -596,7 +727,13 @@ if __name__ == "__main__":
 
         pref_output = pd.DataFrame.from_dict(pref, orient='index')
 
-        pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)
+        if getattr(sys, 'frozen', False):
+            # running in a bundle
+            bundle_dir = sys._MEIPASS
+            pref_output.to_csv(path_or_buf=os.path.join(bundle_dir, 'bin/pref.csv'), index=True, header=False)
+        else:
+            # running live
+            pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)
 
     app.aboutToQuit.connect(prog.save_pref)
     dialog.show()
