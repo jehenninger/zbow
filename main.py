@@ -35,7 +35,6 @@ class Main(Ui_MainWindow):
         super(Main, self).__init__()
         # Ui_MainWindow.__init__(self)
         self.setupUi(dialog)
-        # @TODO Change the icon of the window to something zebrabow-y!
 
         # get operating system
         self.OS = sys.platform

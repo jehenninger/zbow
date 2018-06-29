@@ -8,6 +8,7 @@ import logicle
 import fcsparser
 import math
 import hdbscan
+import main
 from sklearn import cluster
 from vispy import visuals, scene
 from vispy.color import Color, ColorArray
@@ -62,6 +63,8 @@ class SessionData:
         self.h_view_2d = None
         self.h_scatter_2d = None
         self.h_scatter_3d = None
+
+        self.error_dialog = main.ErrorDialog()
 
     # methods
 
@@ -221,8 +224,7 @@ class SessionData:
         elif cluster_on_data == 5:
             data = self.linear_transformed[['RFP', 'YFP', 'CFP']]
         else:
-            print('Could not retrieve data')  # TODO make dialog error message here
-
+            helper.error_message(self.error_dialog, 'Could not retrieve data')
         return(data)
 
     def make_tabulated_cluster_data(self):
