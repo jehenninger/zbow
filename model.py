@@ -579,15 +579,15 @@ class SessionData:
 
             bottom_axis = scene.Axis(parent=self.h_view_2d.scene, pos=[[0, 0], [1, 0]], tick_direction=(0, 1),
                                      font_size=12, axis_color='k', tick_color='k', tick_font_size=0,
-                                     axis_width=3, axis_label='red', axis_label_margin=20, axis_font_size=18)
+                                     axis_width=3, axis_label='', axis_label_margin=20, axis_font_size=18)
 
             right_axis = scene.Axis(parent=self.h_view_2d.scene, pos=[[1, 0], [0.5, 1]], tick_direction=(-1, -1),
                                     font_size=12, axis_color='k', tick_color='k', tick_font_size=0,
-                                    axis_width=3, axis_label='green', axis_label_margin=20, axis_font_size=18)
+                                    axis_width=3, axis_label='', axis_label_margin=20, axis_font_size=18)
 
             left_axis = scene.Axis(parent=self.h_view_2d.scene, pos=[[0, 0], [0.5, 1]], tick_direction=(1, -1),
                                    font_size=12, axis_color='k', tick_color='k', tick_font_size=0,
-                                   axis_width=3, axis_label='blue', axis_label_margin=20, axis_font_size=18)
+                                   axis_width=3, axis_label='', axis_label_margin=20, axis_font_size=18)
 
         cell_color = ColorArray(color=color_data, alpha=1)
         # @BUG I want to use a different alpha here, but Vispy has a bug where you can see through the main canvas with alpha

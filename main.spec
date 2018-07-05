@@ -6,7 +6,7 @@ added_files = [('/Users/jon/PycharmProjects/zbow/venv/lib/python3.6/site-package
                ('/Users/jon/PyCharmProjects/zbow/bin/logo.png', 'bin'),
 	       ('/Users/jon/PyCharmProjects/zbow/bin/logicle' , 'bin/logicle')]
 
-added_imports = ['scipy._lib.messagestream', 'sklearn.neighbors.typedefs', 'sklearn.neighbors.quad_tree', 'sklearn.tree', 'sklearn.tree._utils', 'vispy.glsl', 'PyQt5']
+added_imports = ['scipy._lib.messagestream','pandas._libs.tslibs.timedeltas', 'sklearn.neighbors.typedefs', 'sklearn.neighbors.quad_tree', 'sklearn.tree', 'sklearn.tree._utils', 'vispy.glsl', 'PyQt5']
 
 a = Analysis(['main.py'],
              pathex=['/Users/jon/PycharmProjects/zbow/venv/lib/python3.6/site-packages', '/Users/jon/PycharmProjects/zbow'],

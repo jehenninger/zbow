@@ -31,16 +31,19 @@ class ErrorDialog(QtWidgets.QMessageBox):
 
 
 class Main(Ui_MainWindow):
-    def __init__(self, dialog):
+    def __init__(self, MainWindow, size):
         super(Main, self).__init__()
         # Ui_MainWindow.__init__(self)
-        self.setupUi(dialog)
+        self.setupUi(MainWindow)
 
         # get operating system
         self.OS = sys.platform
 
         # init screen size
-        self.screen_size = []
+        self.screen_size = size
+        width, height = size.width(), size.height()
+        MainWindow.resize(0.50 * width, 0.7 * height)
+        MainWindow.move(0.02 * width, 0.02 * height)
 
         # instance data class and other windows
         self.data = model.SessionData()
@@ -118,11 +121,11 @@ class Main(Ui_MainWindow):
 
     def load_data(self):
 
-        self.scatter3DWindow.move(0.60 * self.screen_size[0], 0.05 * self.screen_size[1])
-        self.scatter3DWindow.resize(0.20 * self.screen_size[0], 0.20*self.screen_size[0])
+        self.scatter3DWindow.move(0.60 * self.screen_size.width(), 0.05 * self.screen_size.height())
+        self.scatter3DWindow.resize(0.20 * self.screen_size.width(), 0.20*self.screen_size.width())
 
-        self.tern2DWindow.move(0.60 * self.screen_size[0], 0.45 * self.screen_size[1])
-        self.tern2DWindow.resize(0.20 * self.screen_size[0], 0.20*self.screen_size[0])
+        self.tern2DWindow.move(0.60 * self.screen_size.width(), 0.45 * self.screen_size.height())
+        self.tern2DWindow.resize(0.20 * self.screen_size.width(), 0.20*self.screen_size.width())
 
         view.start_progress_bar(self.progressBar, start=0, stop=4)
 
@@ -174,11 +177,12 @@ class Main(Ui_MainWindow):
             helper.error_message(self.error_dialog, 'Could not load .fcs or .csv file')
 
     def update_params(self):
-        self.scatter3DWindow.move(0.60 * self.screen_size[0], 0.05 * self.screen_size[1])
-        self.scatter3DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
 
-        self.tern2DWindow.move(0.60 * self.screen_size[0], 0.45 * self.screen_size[1])
-        self.tern2DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
+        self.scatter3DWindow.move(0.60 * self.screen_size.width(), 0.05 * self.screen_size.height())
+        self.scatter3DWindow.resize(0.20 * self.screen_size.width(), 0.20 * self.screen_size.width())
+
+        self.tern2DWindow.move(0.60 * self.screen_size.width(), 0.45 * self.screen_size.height())
+        self.tern2DWindow.resize(0.20 * self.screen_size.width(), 0.20 * self.screen_size.width())
 
         # reinitialize auto_cluster data
         self.data.tab_cluster_data = pd.Series
@@ -289,11 +293,11 @@ class Main(Ui_MainWindow):
 
     def restore_data(self):
 
-        self.scatter3DWindow.move(0.60 * self.screen_size[0], 0.05 * self.screen_size[1])
-        self.scatter3DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
+        self.scatter3DWindow.move(0.60 * self.screen_size.width(), 0.05 * self.screen_size.height())
+        self.scatter3DWindow.resize(0.20 * self.screen_size.width(), 0.20 * self.screen_size.width())
 
-        self.tern2DWindow.move(0.60 * self.screen_size[0], 0.45 * self.screen_size[1])
-        self.tern2DWindow.resize(0.20 * self.screen_size[0], 0.20 * self.screen_size[0])
+        self.tern2DWindow.move(0.60 * self.screen_size.width(), 0.45 * self.screen_size.height())
+        self.tern2DWindow.resize(0.20 * self.screen_size.width(), 0.20 * self.screen_size.width())
 
         # reinitialize auto_cluster data
         self.data.tab_cluster_data = pd.Series
@@ -622,15 +626,10 @@ if __name__ == "__main__":
 
     screen = app.primaryScreen()
     size = screen.size()
-    height = size.height()
-    width = size.width()
 
-    dialog = QtWidgets.QMainWindow()
-    dialog.resize(0.40*width, 0.9*height)
-    dialog.move(0.05*width, 0.05*height)
-    prog = Main(dialog)
-    prog.screen_size = [size.width(), size.height()]
+    MainWindow = QtWidgets.QMainWindow()
 
+    ui = Main(MainWindow, size)
 
     # write/read preferences file
     if getattr(sys, 'frozen', False):
@@ -657,61 +656,61 @@ if __name__ == "__main__":
 
         cluster_data_list = str(pref.loc['cluster_data_list'][1])
         if cluster_data_list == 'custom ternary':
-            prog.clusterOnData.setCurrentIndex(0)
+            ui.clusterOnData.setCurrentIndex(0)
         elif cluster_data_list == 'custom rgb':
-            prog.clusterOnData.setCurrentIndex(1)
+            ui.clusterOnData.setCurrentIndex(1)
         elif cluster_data_list == 'default ternary':
-            prog.clusterOnData.setCurrentIndex(2)
+            ui.clusterOnData.setCurrentIndex(2)
         elif cluster_data_list == 'default rgb':
-            prog.clusterOnData.setCurrentIndex(3)
+            ui.clusterOnData.setCurrentIndex(3)
         elif cluster_data_list == 'linear ternary':
-            prog.clusterOnData.setCurrentIndex(4)
+            ui.clusterOnData.setCurrentIndex(4)
         elif cluster_data_list == 'linear rgb':
-            prog.clusterOnData.setCurrentIndex(5)
+            ui.clusterOnData.setCurrentIndex(5)
 
         tern_color_list = str(pref.loc['tern_color_list'][1])
         if tern_color_list == 'custom':
-            prog.ternColorOption.setCurrentIndex(0)
+            ui.ternColorOption.setCurrentIndex(0)
         elif tern_color_list == 'default':
-            prog.ternColorOption.setCurrentIndex(1)
+            ui.ternColorOption.setCurrentIndex(1)
         elif tern_color_list == 'cluster color':
-            prog.ternColorOption.setCurrentIndex(2)
+            ui.ternColorOption.setCurrentIndex(2)
         elif tern_color_list == 'linear':
-            prog.ternColorOption.setCurrentIndex(3)
+            ui.ternColorOption.setCurrentIndex(3)
 
         tern_scale_list = str(pref.loc['tern_scale_list'][1])
         if tern_scale_list == 'custom':
-                prog.ternScaleOption.setCurrentIndex(0)
+                ui.ternScaleOption.setCurrentIndex(0)
         elif tern_scale_list == 'default':
-                prog.ternScaleOption.setCurrentIndex(1)
+                ui.ternScaleOption.setCurrentIndex(1)
         elif tern_scale_list == 'cluster color':
-                prog.ternScaleOption.setCurrentIndex(2)
+                ui.ternScaleOption.setCurrentIndex(2)
         elif tern_scale_list == 'linear':
-                prog.ternScaleOption.setCurrentIndex(3)
+                ui.ternScaleOption.setCurrentIndex(3)
 
         scatter_color_list = str(pref.loc['scatter_color_list'][1])
         if scatter_color_list == 'custom':
-            prog.scatterColorOption.setCurrentIndex(0)
+            ui.scatterColorOption.setCurrentIndex(0)
         elif scatter_color_list == 'default':
-            prog.scatterColorOption.setCurrentIndex(1)
+            ui.scatterColorOption.setCurrentIndex(1)
         elif scatter_color_list == 'cluster color':
-            prog.scatterColorOption.setCurrentIndex(2)
+            ui.scatterColorOption.setCurrentIndex(2)
         elif scatter_color_list == 'linear':
-            prog.scatterColorOption.setCurrentIndex(3)
+            ui.scatterColorOption.setCurrentIndex(3)
 
         scatter_scale_list = str(pref.loc['scatter_scale_list'][1])
         if scatter_scale_list == 'custom':
-            prog.scatterScaleOption.setCurrentIndex(0)
+            ui.scatterScaleOption.setCurrentIndex(0)
         elif scatter_scale_list == 'default':
-            prog.scatterScaleOption.setCurrentIndex(1)
+            ui.scatterScaleOption.setCurrentIndex(1)
         elif scatter_scale_list == 'cluster color':
-            prog.scatterScaleOption.setCurrentIndex(2)
+            ui.scatterScaleOption.setCurrentIndex(2)
         elif scatter_scale_list == 'linear':
-            prog.scatterScaleOption.setCurrentIndex(3)
+            ui.scatterScaleOption.setCurrentIndex(3)
 
-        prog.clusterSampleSize.setText(str(cluster_sample_size))
-        prog.clusterMinClusterSize.setText(str(cluster_min_cluster_size))
-        prog.clusterMinSamples.setText(str(cluster_min_samples))
+        ui.clusterSampleSize.setText(str(cluster_sample_size))
+        ui.clusterMinClusterSize.setText(str(cluster_min_cluster_size))
+        ui.clusterMinSamples.setText(str(cluster_min_samples))
 
     else:
         pref = {'sample_size': '20000',
@@ -734,6 +733,6 @@ if __name__ == "__main__":
             # running live
             pref_output.to_csv(path_or_buf='bin/pref.csv', index=True, header=False)
 
-    app.aboutToQuit.connect(prog.save_pref)
-    dialog.show()
+    app.aboutToQuit.connect(ui.save_pref)
+    MainWindow.show()
     sys.exit(app.exec_())

@@ -58,7 +58,8 @@ def init_param_table(parameter_table, params):
     # loop through expected params, print them to table, and print their counterparts in second column combo box
     combo_box_list = []
     for p in range(0, num_of_params):
-        parameter_table.setItem(p, 0, QtWidgets.QTableWidgetItem(expected_params_labels[p]))
+        item = QtWidgets.QTableWidgetItem(expected_params_labels[p])
+        parameter_table.setItem(p, 0, item)
         combo_box_list.append(QtWidgets.QComboBox())
         combo_box_list[p].insertItems(0, params)
         parameter_table.setCellWidget(p, 1, combo_box_list[p])

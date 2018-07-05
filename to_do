@@ -11,3 +11,7 @@ may still need a way of removing extreme points
 Add menu items to make grouped cluster plots from previously clustered data
 
 do we need a clear data button?
+
+change pyinstaller to only use the virtual env to maybe make file sizes smaller??
+
+Fix size of the main window -- maybe in Designer??
