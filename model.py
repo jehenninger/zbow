@@ -1,5 +1,14 @@
+import matplotlib as mpl
+mpl.rcParams['pdf.fonttype'] = 42
+mpl.rcParams['ps.fonttype'] = 42
+mpl.rcParams['text.usetex'] = False
+mpl.rcParams['font.sans-serif'] = 'Arial'
+mpl.rcParams['font.family'] = 'sans-serif'
+mpl.rcParams['figure.dpi'] = 300
+
+
 import pandas as pd
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
 import os
 import numpy as np
 import view
@@ -280,13 +289,13 @@ class SessionData:
         diversity_data = diversity_data[diversity_data['id'] != 'noise']
         diversity_data = diversity_data[diversity_data['id'] != 'red_only']['percentage']
 
-        self.gini = helper.gini_coeff(diversity_data.as_matrix())
-        self.shannon = helper.shannon_entropy(diversity_data.as_matrix())
+        self.gini = helper.gini_coeff(diversity_data.values)
+        self.shannon = helper.shannon_entropy(diversity_data.values)
 
     def evaluate_cluster_solution(self, data):
         from sklearn import metrics
         # evaluate clustering solution
-        self.cluster_eval = metrics.silhouette_samples(data.as_matrix(), self.cluster_data_idx)
+        self.cluster_eval = metrics.silhouette_samples(data.values, self.cluster_data_idx)
 
     def auto_cluster(self, cluster_on_data, min_cluster_size=25, min_samples=1, evaluate_cluster=False, prev_clustering_solution=False):
         # from sklearn.cluster import DBSCAN
@@ -295,8 +304,8 @@ class SessionData:
             self.auto_cluster_idx = self.cluster_data_idx
         else:
             data = self.get_data_to_cluster_on(cluster_on_data)
-            # auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.as_matrix())
-            auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples).fit(data.as_matrix())
+            # auto_cluster_data = DBSCAN(eps=eps, n_jobs=-1).fit_predict(data.values)
+            auto_cluster_method = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples).fit(data.values)
             auto_cluster_data = auto_cluster_method.labels_
             self.outlier_scores = auto_cluster_method.outlier_scores_
 
@@ -390,19 +399,19 @@ class SessionData:
 
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
-            scale_data = self.custom_transformed.as_matrix()
+            scale_data = self.custom_transformed.values
         elif scale == 1:
-            scale_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            scale_data = self.default_transformed[['RFP', 'YFP', 'CFP']].values
         elif scale == 2:
-            scale_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            scale_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].values
         else:
-            scale_data = self.custom_transformed.as_matrix()
+            scale_data = self.custom_transformed.values
 
         # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
         if color == 0:
-            color_data = self.custom_transformed.as_matrix()
+            color_data = self.custom_transformed.values
         elif color == 1:
-            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].values
         elif color == 2:
             if self.tab_cluster_data.empty:
                 color_data = helper.distinguishable_colors(1)
@@ -413,7 +422,7 @@ class SessionData:
                 for i in range(0, scale_data.shape[0]):
                     color_data[i] = pseudo_color[self.cluster_data_idx[i]]
         elif color == 3:
-            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].values
         elif color == 4:
             color_data = np.empty([self.custom_transformed.shape[0], self.custom_transformed.shape[1]])
             color_data[:] = 0.3  # grey for non-highlighted cells
@@ -421,7 +430,7 @@ class SessionData:
             if highlight_color:
                 color_data[highlight_cells, :] = [0.9, 0.9, 0.9]
             else:
-                color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values].as_matrix()
+                color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][highlight_cells.values].values
 
         if not update:
             # build your visuals
@@ -508,19 +517,19 @@ class SessionData:
 
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
-            scale_data = self.custom_ternary.as_matrix()
+            scale_data = self.custom_ternary.values
         elif scale == 1:
-            scale_data = self.default_ternary.as_matrix()
+            scale_data = self.default_ternary.values
         elif scale == 2:
-            scale_data = self.linear_ternary.as_matrix()
+            scale_data = self.linear_ternary.values
         else:
-            scale_data = self.custom_ternary.as_matrix()
+            scale_data = self.custom_ternary.values
 
         # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
         if color == 0:
-            color_data = self.custom_transformed.as_matrix()
+            color_data = self.custom_transformed.values
         elif color == 1:
-            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].values
         elif color == 2:
             if self.tab_cluster_data.empty:
                 color_data = helper.distinguishable_colors(1)
@@ -532,7 +541,7 @@ class SessionData:
                 for i in range(0, scale_data.shape[0]):
                     color_data[i] = pseudo_color[self.cluster_data_idx[i]]
         elif color == 3:
-            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].values
         elif color == 4:
             color_data = np.empty([self.custom_transformed.shape[0], self.custom_transformed.shape[1]])
             color_data[:] = 0.8  # grey for non-highlighted cells
@@ -541,7 +550,7 @@ class SessionData:
                 color_data[highlight_cells, :] = [0.2, 0.2, 0.2]
             else:
                 color_data[highlight_cells, :] = self.custom_transformed[['RFP', 'YFP', 'CFP']][
-                    highlight_cells.values].as_matrix()
+                    highlight_cells.values].values
 
         if not update:
             # build your visuals
@@ -608,24 +617,24 @@ class SessionData:
     def make_output_plots(self, scale, color, progress_bar):
         # get scale data: scale_list = ['custom', 'default', 'linear']
         if scale == 0:
-            scale_data = self.custom_transformed.as_matrix()
+            scale_data = self.custom_transformed.values
         elif scale == 1:
-            scale_data = self.default_transformed.as_matrix()
+            scale_data = self.default_transformed.values
         elif scale == 2:
-            scale_data = self.linear_transformed.as_matrix()
+            scale_data = self.linear_transformed.values
 
         if scale == 0:
-            contour_data = self.custom_ternary.as_matrix()
+            contour_data = self.custom_ternary.values
         elif scale == 1:
-            contour_data = self.default_ternary.as_matrix()
+            contour_data = self.default_ternary.values
         elif scale == 2:
-            contour_data = self.linear_ternary.as_matrix()
+            contour_data = self.linear_ternary.values
 
         # get color data:color_list = ['custom', 'default', 'cluster color', 'linear']
         if color == 0:
-            color_data = self.custom_transformed.as_matrix()
+            color_data = self.custom_transformed.values
         elif color == 1:
-            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            color_data = self.default_transformed[['RFP', 'YFP', 'CFP']].values
         elif color == 2:
             if self.tab_cluster_data.empty:
                 color_data = helper.distinguishable_colors(1)
@@ -637,7 +646,7 @@ class SessionData:
                 for i in range(0, scale_data.shape[0]):
                     color_data[i] = pseudo_color[self.cluster_data_idx[i]]
         elif color == 3:
-            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].as_matrix()
+            color_data = self.linear_transformed[['RFP', 'YFP', 'CFP']].values
 
         # this assures that R + G + B = scale, which is required for the ternary library
         total = scale_data.sum(axis=1)
@@ -674,7 +683,7 @@ class SessionData:
 
         ternary_filename = os.path.join(self.save_folder, 'ternary_plots', self.sample_name)
         plt.savefig(ternary_filename + '.png', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
-        plt.savefig(ternary_filename + '.eps', dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.savefig(ternary_filename + '.pdf', transparent=True, pad_inches=0, Bbox='tight')
 
         plt.close(tern_figure)
 
@@ -715,8 +724,8 @@ class SessionData:
         plt.savefig(bar_filename + 'bar_graph.png',
                     dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
-        plt.savefig(bar_filename + 'bar_graph.eps',
-                    dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.savefig(bar_filename + 'bar_graph.pdf',
+                    transparent=True, pad_inches=0, Bbox='tight')
 
         plt.close(bar_figure)
 
@@ -740,7 +749,8 @@ class SessionData:
         x_fudge_choice = [uniform(-x_fudge_factor[i], x_fudge_factor[i]) for i, val in enumerate(x_fudge_factor)]
 
         x_coord = np.array(x_coord) + np.array(x_fudge_choice)
-
+        
+        bar_color = bar_color.copy()
         bar_color['alpha'] = [0.7] * len(bar_color)
         bar_color = [tuple(x) for x in bar_color.values]
 
@@ -752,8 +762,8 @@ class SessionData:
         plt.savefig(bar_filename + 'cluster_graph.png',
                     dpi=300, transparent=True, pad_inches=0, Bbox='tight')
 
-        plt.savefig(bar_filename + 'cluster_graph.eps',
-                    dpi=300, transparent=True, pad_inches=0, Bbox='tight')
+        plt.savefig(bar_filename + 'cluster_graph.pdf',
+                    transparent=True, pad_inches=0, Bbox='tight')
 
         plt.close(cluster_figure)
 
@@ -820,7 +830,7 @@ class SessionData:
         backgate_ax2.set_yticklabels([])
 
         backgate_ax1.scatter(scatter_data['YFP'], scatter_data['CFP'],
-                             s=2, c=color_data.as_matrix())
+                             s=2, c=color_data.values)
 
         # backgate_ax1.scatter(self.default_transformed['YFP'], self.default_transformed['CFP'],
         #                      s=2, c=color_data)
@@ -841,22 +851,28 @@ class SessionData:
         #         (self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
         #     quad_color = color_data[(self.default_transformed['YFP'] > 0.5) & (self.default_transformed['CFP'] < 0.5)]
 
-        if quadrant is 1:
-            quad_data = scatter_data[(scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] > 0.5)]
-            quad_color = color_data[(scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] > 0.5)]
-        elif quadrant is 2:
-            quad_data = scatter_data[
-                (scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] > 0.5)]
-            quad_color = color_data[(scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] > 0.5)]
-        elif quadrant is 3:
-            quad_data = self.default_transformed[
-                (scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] < 0.5)]
-            quad_color = color_data[(scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] < 0.5)]
-        elif quadrant is 4:
-            quad_data = self.default_transformed[
-                (scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] < 0.5)]
-            quad_color = color_data[(scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] < 0.5)]
-
+        if quadrant == 1:
+            boolean_index = (scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] > 0.5)
+            boolean_index = boolean_index.values.tolist()
+            quad_data = scatter_data[boolean_index]
+            quad_color = color_data[boolean_index]
+        elif quadrant == 2:
+            boolean_index = (scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] > 0.5)
+            boolean_index = boolean_index.values.tolist()
+            quad_data = scatter_data[boolean_index]
+            quad_color = color_data[boolean_index]
+        elif quadrant == 3:
+            boolean_index = (scatter_data['YFP'] < 0.5) & (scatter_data['CFP'] < 0.5)
+            boolean_index = boolean_index.values.tolist()
+            quad_data = self.default_transformed[boolean_index]
+            quad_color = color_data[boolean_index]
+        elif quadrant == 4:
+            boolean_index = (scatter_data['YFP'] > 0.5) & (scatter_data['CFP'] < 0.5)
+            boolean_index = boolean_index.values.tolist()
+            quad_data = self.default_transformed[boolean_index]
+            quad_color = color_data[boolean_index]
+        
+        quad_color = quad_color.copy()
         quad_color['alpha'] = [1.0] * len(quad_color)
         quad_color = [tuple(x) for x in quad_color.values]
         backgate_ax2.scatter(quad_data['YFP'], quad_data['RFP'],

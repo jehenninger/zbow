@@ -1,7 +1,7 @@
 # methods
-from PyQt5 import QtWidgets
-from PyQt5 import QtGui
-from PyQt5 import QtCore
+from PyQt6 import QtWidgets
+from PyQt6 import QtGui
+from PyQt6 import QtCore
 import re
 from itertools import chain
 
@@ -77,8 +77,7 @@ def update_cluster_table(cluster_table, tab_cluster_data):
 
     for c in range(0, num_of_clusters):
         cluster_id = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['id']))
-        #cluster_id.setFlags(QtCore.Qt.ItemIsSelectable)
-        cluster_id.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+        cluster_id.setFlags(QtCore.Qt.ItemFlag.ItemIsSelectable | QtCore.Qt.ItemFlag.ItemIsEnabled)
 
         num_of_cells = QtWidgets.QTableWidgetItem(str(tab_cluster_data.iloc[c]['num of cells']))
 
@@ -96,16 +95,16 @@ def update_cluster_table(cluster_table, tab_cluster_data):
         cluster_table.setItem(c, 0, cluster_id)
         cluster_id.setBackground(QtGui.QColor(cluster_color_r, cluster_color_g, cluster_color_b))
         cluster_id.setForeground(QtGui.QColor('white'))
-        cluster_id.setTextAlignment(QtCore.Qt.AlignCenter)
+        cluster_id.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         cluster_table.setItem(c, 1, num_of_cells)
-        num_of_cells.setTextAlignment(QtCore.Qt.AlignRight)
+        num_of_cells.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
 
         cluster_table.setItem(c, 2, percentage)
-        percentage.setTextAlignment(QtCore.Qt.AlignRight)
+        percentage.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
 
         cluster_table.setItem(c, 3, mean_sil)
-        mean_sil.setTextAlignment(QtCore.Qt.AlignRight)
+        mean_sil.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
 
         # color background of silhouette values if they are below a threshold of 0.6
         if tab_cluster_data.iloc[c]['mean sil'] > 0.6:

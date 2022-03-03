@@ -1,0 +1,8 @@
+sample_size,20000
+HDBSCAN_min_cluster_size,25
+HDBSCAN_min_samples,1
+cluster_data_list,custom ternary
+scatter_color_list,custom
+scatter_scale_list,default
+tern_color_list,custom
+tern_scale_list,custom

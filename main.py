@@ -1,3 +1,5 @@
+#!/Users/jonathanhenninger/zbow_venv/bin/python
+
 import sys
 from window import Ui_MainWindow
 import model
@@ -5,15 +7,15 @@ import view
 import helper
 import pandas as pd
 import os
-from PyQt5 import QtWidgets
-from PyQt5 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6 import QtGui
 from matplotlib import pyplot as plt
 import numpy as np
 from random import uniform
 from matplotlib import ticker
 
-from PyQt5 import QtOpenGL  # necessary for pyinstaller
-from PyQt5 import QtTest  # necessary for pyinstaller
+# from PyQt5 import QtOpenGL  # necessary for pyinstaller
+# from PyQt5 import QtTest  # necessary for pyinstaller
 
 
 class ScatterWindow(QtWidgets.QMainWindow):
@@ -42,8 +44,8 @@ class Main(Ui_MainWindow):
         # init screen size
         self.screen_size = size
         width, height = size.width(), size.height()
-        MainWindow.resize(0.50 * width, 0.7 * height)
-        MainWindow.move(0.02 * width, 0.02 * height)
+        MainWindow.resize(int(0.50 * width), int(0.7 * height))
+        MainWindow.move(int(0.02 * width), int(0.02 * height))
 
         # instance data class and other windows
         self.data = model.SessionData()
@@ -121,11 +123,11 @@ class Main(Ui_MainWindow):
 
     def load_data(self):
 
-        self.scatter3DWindow.move(0.60 * self.screen_size.width(), 0.05 * self.screen_size.height())
-        self.scatter3DWindow.resize(0.20 * self.screen_size.width(), 0.20*self.screen_size.width())
+        self.scatter3DWindow.move(int(0.60 * self.screen_size.width()), int(0.05 * self.screen_size.height()))
+        self.scatter3DWindow.resize(int(0.20 * self.screen_size.width()), int(0.20*self.screen_size.width()))
 
-        self.tern2DWindow.move(0.60 * self.screen_size.width(), 0.45 * self.screen_size.height())
-        self.tern2DWindow.resize(0.20 * self.screen_size.width(), 0.20*self.screen_size.width())
+        self.tern2DWindow.move(int(0.60 * self.screen_size.width()), int(0.45 * self.screen_size.height()))
+        self.tern2DWindow.resize(int(0.20 * self.screen_size.width()), int(0.20*self.screen_size.width()))
 
         view.start_progress_bar(self.progressBar, start=0, stop=4)
 
@@ -735,4 +737,5 @@ if __name__ == "__main__":
 
     app.aboutToQuit.connect(ui.save_pref)
     MainWindow.show()
-    sys.exit(app.exec_())
+#     sys.exit(app.exec_())
+    sys.exit(app.exec())
